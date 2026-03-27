@@ -207,15 +207,22 @@ const CustomerDetail = () => {
             {walletSubTab === 'payment' && (
               payment.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {payment.map((p, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#f0fdf4', borderRadius: 8 }}>
+                  {payment.map((p, i) => {
+                    const isSuccess = p.paymentStatus === 'success';
+                    const isFailed = p.paymentStatus === 'failed';
+                    const bgColor = isSuccess ? '#f0fdf4' : isFailed ? '#fef2f2' : '#fffbeb';
+                    const textColor = isSuccess ? '#059669' : isFailed ? '#dc2626' : '#d97706';
+                    const statusLabel = isSuccess ? 'Success' : isFailed ? 'Failed' : 'Pending';
+                    return (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: bgColor, borderRadius: 8 }}>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 500 }}>Recharge {p.paymentMode ? `(${p.paymentMode})` : ''}</div>
+                        <div style={{ fontSize: 13, fontWeight: 500 }}>Recharge {p.paymentMode ? `(${p.paymentMode})` : ''} <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: textColor + '18', color: textColor, fontWeight: 600 }}>{statusLabel}</span></div>
                         <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>{formatDateTime(p.created_at)}</div>
                       </div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: '#059669' }}>+{curr}{p.amount}</div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: textColor }}>{isSuccess ? '+' : ''}{curr}{p.amount}</div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : <p style={emptyText}>No payment logs.</p>
             )}
