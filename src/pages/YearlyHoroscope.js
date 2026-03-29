@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { horoscopeApi } from '../api/services';
+import { toast } from 'react-toastify';
 
 const YearlyHoroscope = () => {
   const today = new Date().toISOString().split('T')[0];
@@ -100,6 +101,10 @@ const YearlyHoroscope = () => {
         <div style={styles.header}>
           <h2 style={styles.title}>Yearly Horoscope</h2>
           <div style={styles.filterRow}>
+            <button onClick={async () => { try { const r = await horoscopeApi.generateYearly(); toast.success(r.data?.message || 'Yearly horoscope generated!'); fetchData(); } catch(e) { toast.error('Generation failed'); } }}
+              style={{ ...styles.applyBtn, background: '#10b981', marginRight: 8 }}>
+              Generate Yearly
+            </button>
             <input
               type="date"
               value={inputDate}

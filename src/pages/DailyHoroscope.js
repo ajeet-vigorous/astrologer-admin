@@ -1,7 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { horoscopeApi } from '../api/services';
+import { toast } from 'react-toastify';
 
 const DailyHoroscope = () => {
+  const [generating, setGenerating] = useState(false);
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      const res = await horoscopeApi.generateDaily();
+      toast.success(res.data?.message || 'Daily horoscope generated!');
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Generation failed');
+    }
+    setGenerating(false);
+  };
+
   const today = new Date().toISOString().split('T')[0];
   const [data, setData] = useState([]);
   const [page, setPage] = useState(1);
@@ -100,6 +115,10 @@ const DailyHoroscope = () => {
         <div style={styles.header}>
           <h2 style={styles.title}>Daily Horoscope</h2>
           <div style={styles.filterRow}>
+            <button onClick={handleGenerate} disabled={generating}
+              style={{ ...styles.applyBtn, background: '#10b981', marginRight: 8, opacity: generating ? 0.6 : 1 }}>
+              {generating ? 'Generating...' : 'Generate Today'}
+            </button>
             <input
               type="date"
               value={inputDate}

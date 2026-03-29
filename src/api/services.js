@@ -174,6 +174,9 @@ export const horoscopeApi = {
   getWeeklyList: (params) => API.get('/horoscope/weekly-list', { params }),
   getYearlyList: (params) => API.get('/horoscope/yearly', { params }),
   getFeedbackList: (params) => API.get('/horoscope/feedback-list', { params }),
+  generateDaily: () => API.post('/horoscope/generate-daily'),
+  generateWeekly: () => API.post('/horoscope/generate-weekly'),
+  generateYearly: () => API.post('/horoscope/generate-yearly'),
 };
 
 // ==================== DAILY HOROSCOPE INSIGHT ====================

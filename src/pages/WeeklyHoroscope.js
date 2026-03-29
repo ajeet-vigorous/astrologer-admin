@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { horoscopeApi } from '../api/services';
+import { toast } from 'react-toastify';
 
 const WeeklyHoroscope = () => {
   const today = new Date().toISOString().split('T')[0];
@@ -100,6 +101,10 @@ const WeeklyHoroscope = () => {
         <div style={styles.header}>
           <h2 style={styles.title}>Weekly Horoscope</h2>
           <div style={styles.filterRow}>
+            <button onClick={async () => { try { const r = await horoscopeApi.generateWeekly(); toast.success(r.data?.message || 'Weekly horoscope generated!'); fetchData(); } catch(e) { toast.error('Generation failed'); } }}
+              style={{ ...styles.applyBtn, background: '#10b981', marginRight: 8 }}>
+              Generate Weekly
+            </button>
             <input
               type="date"
               value={inputDate}
