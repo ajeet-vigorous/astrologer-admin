@@ -4,7 +4,7 @@ import Modal from '../components/Modal';
 import FormInput from '../components/FormInput';
 import { teamRoleApi } from '../api/services';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_BASE = process.env.REACT_APP_API_URL || 'https://astrology-i7c9.onrender.com';
 
 const TeamMembers = () => {
   const [members, setMembers] = useState([]);

@@ -108,6 +108,7 @@ const AstrologerDetail = () => {
     { key: 'followers', label: 'Followers List' },
     { key: 'notification', label: 'Notification List' },
     { key: 'gift', label: 'Gift List' },
+    { key: 'reviews', label: `Reviews (${review.length})` },
     { key: 'bank', label: 'Bank Details' },
   ];
 
@@ -534,6 +535,53 @@ const AstrologerDetail = () => {
         )}
 
         {/* 10. Bank Details Tab */}
+        {activeTab === 'reviews' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h4 style={{ margin: 0 }}>Customer Reviews ({review.length})</h4>
+              {review.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f9f5ff', padding: '8px 16px', borderRadius: 10, border: '1px solid #e0d4f5' }}>
+                  <span style={{ fontSize: 22, color: '#f59e0b' }}>&#9733;</span>
+                  <span style={{ fontSize: 20, fontWeight: 700, color: '#1a0533' }}>{(review.reduce((sum, r) => sum + (parseFloat(r.rating) || 0), 0) / review.length).toFixed(1)}</span>
+                  <span style={{ fontSize: 13, color: '#6b7280' }}>/ 5 ({review.length} reviews)</span>
+                </div>
+              )}
+            </div>
+            {review.length === 0 ? (
+              <p style={{ textAlign: 'center', color: '#9ca3af', padding: 30 }}>No reviews yet</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {review.map((r, i) => (
+                  <div key={r.id || i} style={{ background: '#fff', border: '1px solid #f0e6ff', borderRadius: 12, padding: '16px 20px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                    <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#7c3aed', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
+                      {(r.user_name || r.userName || 'U')[0].toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <span style={{ fontWeight: 600, color: '#1a0533', fontSize: 14 }}>{r.user_name || r.userName || 'Customer'}</span>
+                        <span style={{ fontSize: 12, color: '#9ca3af' }}>{r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}</span>
+                      </div>
+                      <div style={{ marginBottom: 6 }}>
+                        {[1,2,3,4,5].map(n => (
+                          <span key={n} style={{ color: n <= (parseFloat(r.rating) || 0) ? '#f59e0b' : '#d1d5db', fontSize: 16 }}>&#9733;</span>
+                        ))}
+                        <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 6 }}>{parseFloat(r.rating || 0).toFixed(1)}</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: 13, color: '#374151', lineHeight: 1.5 }}>{r.review || '-'}</p>
+                      {r.reply && (
+                        <div style={{ marginTop: 8, background: '#f0fdf4', borderRadius: 8, padding: '8px 12px', borderLeft: '3px solid #10b981' }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: '#059669' }}>Astrologer Reply:</span>
+                          <p style={{ margin: '4px 0 0', fontSize: 13, color: '#374151' }}>{r.reply}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'bank' && (
           <div>
             <h4 style={{ marginTop: 0, marginBottom: 15 }}>Bank Details</h4>
