@@ -12,9 +12,10 @@ const ReportRequests = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await reportRequestApi.getAll({ page, search });
-      setData(res.data.data || []);
-      setPagination(res.data.pagination || null);
+      const res = await reportRequestApi.getAll({ page, searchString: search });
+      const d = res.data?.data || res.data;
+      setData(d?.reportRequest || d?.data || []);
+      setPagination(d?.totalPages ? { totalPages: d.totalPages, totalRecords: d.totalRecords, start: d.start, end: d.end, page: d.currentPage } : null);
     } catch (err) {
       console.error('Error fetching report requests:', err);
     }
@@ -54,19 +55,24 @@ const ReportRequests = () => {
 
   const columns = [
     { header: '#', render: (row, i) => ((page - 1) * 10) + i + 1 },
-    { header: 'Customer', render: (row) => row.customerName || row.customer?.name || '-' },
-    { header: 'Astrologer', render: (row) => row.astrologerName || row.astrologer?.name || '-' },
-    { header: 'Report Type', render: (row) => row.reportType || row.report?.title || '-' },
+    { header: 'Customer', render: (row) => `${row.firstName || ''} ${row.lastName || ''}`.trim() || row.customerName || '-' },
+    { header: 'Contact', render: (row) => row.contactNo || '-' },
+    { header: 'Astrologer', render: (row) => row.astrologerName || '-' },
+    { header: 'Report Type', render: (row) => row.reportType || '-' },
+    { header: 'Rate', render: (row) => row.reportRate ? `₹${parseFloat(row.reportRate).toFixed(2)}` : '-' },
+    { header: 'Birth Date', render: (row) => row.birthDate || '-' },
     {
       header: 'Status',
       render: (row) => {
-        const status = row.status || 'pending';
-        const colors = { completed: { bg: '#d1fae5', color: '#065f46' }, pending: { bg: '#fef3c7', color: '#92400e' }, rejected: { bg: '#fee2e2', color: '#991b1b' } };
-        const c = colors[status] || colors.pending;
-        return <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, background: c.bg, color: c.color }}>{status.charAt(0).toUpperCase() + status.slice(1)}</span>;
+        const hasFile = !!row.reportFile;
+        return <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, background: hasFile ? '#d1fae5' : '#fef3c7', color: hasFile ? '#065f46' : '#92400e' }}>{hasFile ? 'Completed' : 'Pending'}</span>;
       }
     },
-    { header: 'Date', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString() : '-' }
+    {
+      header: 'Report',
+      render: (row) => row.reportFile ? <a href={`${window.location.origin.replace(':3000',':5000')}/${row.reportFile}`} target="_blank" rel="noreferrer" style={{ color: '#7c3aed', fontWeight: 600 }}>Download</a> : '--'
+    },
+    { header: 'Date', render: (row) => row.created_at ? new Date(row.created_at).toLocaleDateString('en-IN') : '-' }
   ];
 
   return (
