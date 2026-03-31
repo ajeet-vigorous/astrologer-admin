@@ -15,10 +15,9 @@ const AiAstrologerForm = () => {
     category: [],
     primary_skill: [],
     all_skills: [],
-    chat_charge_inr: '',
-    chat_charge_usd: '',
+    chat_charge: '',
     experience: '',
-    system_instruction: ''
+    system_intruction: ''
   });
   const [imagePreview, setImagePreview] = useState('');
   const [categories, setCategories] = useState([]);
@@ -29,23 +28,26 @@ const AiAstrologerForm = () => {
       try {
         if (isEdit) {
           const res = await aiAstrologerApi.getEdit(id);
-          const item = res.data.aiAstrologer || res.data.data || {};
-          setCategories(res.data.categories || []);
-          setSkills(res.data.skills || []);
+          const d = res.data?.data || res.data;
+          const item = d?.aiAstrologer || d || {};
+          setCategories(d?.categories || res.data?.categories || []);
+          setSkills(d?.skills || res.data?.skills || []);
+          const catIds = item.astrologerCategoryId ? item.astrologerCategoryId.split(',').map(Number).filter(Boolean) : [];
+          const priIds = item.primary_skill ? item.primary_skill.split(',').map(Number).filter(Boolean) : [];
+          const allIds = item.all_skills ? item.all_skills.split(',').map(Number).filter(Boolean) : [];
           setForm({
             name: item.name || '',
             about: item.about || '',
             profile_image: '',
-            category: Array.isArray(item.category) ? item.category.map(c => c._id || c.id || c) : [],
-            primary_skill: Array.isArray(item.primary_skill) ? item.primary_skill.map(s => s._id || s.id || s) : [],
-            all_skills: Array.isArray(item.all_skills || item.skills) ? (item.all_skills || item.skills).map(s => s._id || s.id || s) : [],
-            chat_charge_inr: item.chat_charge_inr || '',
-            chat_charge_usd: item.chat_charge_usd || '',
+            category: catIds,
+            primary_skill: priIds,
+            all_skills: allIds,
+            chat_charge: item.chat_charge || '',
             experience: item.experience || '',
-            system_instruction: item.system_instruction || ''
+            system_intruction: item.system_intruction || ''
           });
-          if (item.profile_image) {
-            setImagePreview(item.profile_image.startsWith('http') ? item.profile_image : '/' + item.profile_image);
+          if (item.image) {
+            setImagePreview(item.image.startsWith('http') ? item.image : '/' + item.image);
           }
         } else {
           const res = await aiAstrologerApi.getFormData();
@@ -239,32 +241,17 @@ const AiAstrologerForm = () => {
 
               <div style={styles.grid2}>
                 <div>
-                  <label style={styles.label}>Chat Charge INR</label>
+                  <label style={styles.label}>Chat Charge (&#8377;/message)</label>
                   <input
                     type="number"
-                    name="chat_charge_inr"
-                    value={form.chat_charge_inr}
+                    name="chat_charge"
+                    value={form.chat_charge}
                     onChange={handleChange}
-                    placeholder="Enter chat charge in INR"
+                    placeholder="e.g. 10"
                     style={styles.input}
                     min="0"
                   />
                 </div>
-                <div>
-                  <label style={styles.label}>Chat Charge USD</label>
-                  <input
-                    type="number"
-                    name="chat_charge_usd"
-                    value={form.chat_charge_usd}
-                    onChange={handleChange}
-                    placeholder="Enter chat charge in USD"
-                    style={styles.input}
-                    min="0"
-                  />
-                </div>
-              </div>
-
-              <div style={{ ...styles.grid2, marginTop: 16 }}>
                 <div>
                   <label style={styles.label}>Experience In Years</label>
                   <input
@@ -272,7 +259,7 @@ const AiAstrologerForm = () => {
                     name="experience"
                     value={form.experience}
                     onChange={handleChange}
-                    placeholder="Enter experience in years"
+                    placeholder="e.g. 5"
                     style={styles.input}
                     min="0"
                   />
@@ -280,12 +267,12 @@ const AiAstrologerForm = () => {
               </div>
 
               <div style={{ marginTop: 16 }}>
-                <label style={styles.label}>System Instruction</label>
+                <label style={styles.label}>System Instruction (AI Prompt)</label>
                 <textarea
-                  name="system_instruction"
-                  value={form.system_instruction}
+                  name="system_intruction"
+                  value={form.system_intruction}
                   onChange={handleChange}
-                  placeholder="Enter system instruction for AI prompt"
+                  placeholder="e.g. You are a Tarot Reader. Provide guidance based on tarot card readings..."
                   style={{ ...styles.input, minHeight: 120, resize: 'vertical' }}
                 />
               </div>

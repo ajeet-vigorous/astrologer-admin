@@ -43,7 +43,8 @@ const PujaOrders = () => {
     try {
       await pujaApi.updateOrder({ puja_order_id: orderId, astrologer_id: astrologerId });
       alert('Astrologer assigned successfully!');
-    } catch (err) { console.error(err); }
+      fetchData();
+    } catch (err) { alert('Failed to assign'); console.error(err); }
   };
 
   const formatDate = (d) => {
@@ -179,13 +180,22 @@ const PujaOrders = () => {
                     <td style={styles.td}>{currency} {row.order_total_price ? Number(row.order_total_price).toFixed(2) : '0.00'}</td>
                     <td style={styles.td}>{formatDate(row.created_at)}</td>
                     <td style={styles.td}>
-                      <span style={{
-                        padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600,
-                        background: row.puja_order_status === 'Completed' ? '#d1fae5' : row.puja_order_status === 'Cancelled' ? '#fee2e2' : '#fef3c7',
-                        color: row.puja_order_status === 'Completed' ? '#065f46' : row.puja_order_status === 'Cancelled' ? '#991b1b' : '#92400e'
+                      <select value={row.puja_order_status || 'placed'} onChange={async (e) => {
+                        try {
+                          await pujaApi.updateOrder({ puja_order_id: row.id, puja_order_status: e.target.value });
+                          fetchData();
+                        } catch(err) { alert('Failed to update status'); }
+                      }} style={{
+                        padding: '4px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                        background: row.puja_order_status === 'completed' ? '#d1fae5' : row.puja_order_status === 'cancelled' ? '#fee2e2' : '#fef3c7',
+                        color: row.puja_order_status === 'completed' ? '#065f46' : row.puja_order_status === 'cancelled' ? '#991b1b' : '#92400e',
+                        border: '1px solid #d1d5db'
                       }}>
-                        {row.puja_order_status || '--'}
-                      </span>
+                        <option value="pending">Pending</option>
+                        <option value="placed">Placed</option>
+                        <option value="ongoing">Ongoing</option>
+                        <option value="completed">Completed</option>
+                      </select>
                     </td>
                   </tr>
                 ))

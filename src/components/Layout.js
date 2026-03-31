@@ -19,6 +19,8 @@ const menuItems = [
     { title: 'Profile Boost History', path: '/admin/profile-boost-history' },
     { title: 'Astrologer Assistant', path: '/admin/astrologer-assistants' },
     { title: 'Document List', path: '/admin/astrologer-documents' },
+    { title: 'AI Astrologers', path: '/admin/ai-astrologer' },
+    { title: 'AI Chat History', path: '/admin/ai-chat-history' },
   ]},
   { title: 'AstroShop', children: [
     { title: 'Product Categories', path: '/admin/astromall/categories' },

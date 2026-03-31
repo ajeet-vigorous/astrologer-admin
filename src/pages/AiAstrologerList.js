@@ -12,9 +12,10 @@ const AiAstrologerList = () => {
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await aiAstrologerApi.getAll({ page, search, per_page: 15 });
-      setData(res.data.data || []);
-      setPagination(res.data.pagination || null);
+      const res = await aiAstrologerApi.getAll({ page, searchString: search });
+      const d = res.data?.data || res.data || {};
+      setData(d.aiAstrologers || d.data || []);
+      setPagination(d.totalPages ? { totalPages: d.totalPages, totalRecords: d.totalRecords, start: d.start, end: d.end, page: d.page } : null);
     } catch (err) {
       console.error('Error fetching AI astrologers:', err);
     }
@@ -79,8 +80,7 @@ const AiAstrologerList = () => {
                 <th style={styles.th}>Category</th>
                 <th style={styles.th}>Primary Skill</th>
                 <th style={styles.th}>All Skills</th>
-                <th style={styles.th}>Chat Charge (INR)</th>
-                <th style={styles.th}>Chat Charge (USD)</th>
+                <th style={styles.th}>Chat Charge (&#8377;)</th>
                 <th style={styles.th}>Experience</th>
                 <th style={styles.th}>System Instruction</th>
                 <th style={styles.th}>ACTIONS</th>
@@ -91,9 +91,9 @@ const AiAstrologerList = () => {
                 <tr key={row._id || row.id || i} style={{ borderBottom: '1px solid #e5e7eb' }}>
                   <td style={styles.td}>{startIndex + i}</td>
                   <td style={styles.td}>
-                    {row.profile_image ? (
+                    {row.image ? (
                       <img
-                        src={row.profile_image.startsWith('http') ? row.profile_image : '/' + row.profile_image}
+                        src={row.image.startsWith('http') ? row.image : '/' + row.image}
                         alt={row.name}
                         style={{ width: 45, height: 45, borderRadius: '50%', objectFit: 'cover' }}
                         onError={(e) => { e.target.style.display = 'none'; }}
@@ -104,13 +104,12 @@ const AiAstrologerList = () => {
                   </td>
                   <td style={styles.td}>{row.name || '--'}</td>
                   <td style={styles.td} title={row.about}>{truncate(row.about, 50)}</td>
-                  <td style={styles.td}>{row.category ? (Array.isArray(row.category) ? row.category.map(c => c.name || c).join(', ') : row.category.name || row.category) : '--'}</td>
-                  <td style={styles.td}>{row.primary_skill ? (Array.isArray(row.primary_skill) ? row.primary_skill.map(s => s.name || s).join(', ') : row.primary_skill.name || row.primary_skill) : '--'}</td>
-                  <td style={styles.td}>{getSkillNames(row.all_skills || row.skills)}</td>
-                  <td style={styles.td}>{row.chat_charge_inr != null ? row.chat_charge_inr : '--'}</td>
-                  <td style={styles.td}>{row.chat_charge_usd != null ? row.chat_charge_usd : '--'}</td>
+                  <td style={styles.td}>{row.categoryList ? row.categoryList.map(c => c.name).join(', ') : row.astrologerCategoryId || '--'}</td>
+                  <td style={styles.td}>{row.primarySkillList ? row.primarySkillList.map(s => s.name).join(', ') : row.primary_skill || '--'}</td>
+                  <td style={styles.td}>{row.allSkillsList ? row.allSkillsList.map(s => s.name).join(', ') : row.all_skills || '--'}</td>
+                  <td style={styles.td}>{row.chat_charge != null ? '₹' + row.chat_charge : '--'}</td>
                   <td style={styles.td}>{row.experience != null ? row.experience + ' yrs' : '--'}</td>
-                  <td style={styles.td} title={row.system_instruction}>{truncate(row.system_instruction, 30)}</td>
+                  <td style={styles.td} title={row.system_intruction}>{truncate(row.system_intruction, 30)}</td>
                   <td style={styles.td}>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button onClick={() => navigate(`/admin/ai-astrologer/edit/${row._id || row.id}`)} style={styles.editBtn}>Edit</button>
@@ -120,7 +119,7 @@ const AiAstrologerList = () => {
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={12} style={{ ...styles.td, textAlign: 'center', padding: 30, color: '#9ca3af' }}>No data found</td>
+                  <td colSpan={11} style={{ ...styles.td, textAlign: 'center', padding: 30, color: '#9ca3af' }}>No data found</td>
                 </tr>
               )}
             </tbody>

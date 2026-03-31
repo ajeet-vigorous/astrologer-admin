@@ -3,7 +3,8 @@ import API from './axiosInstance';
 // ==================== DASHBOARD ====================
 export const dashboardApi = {
   get: () => API.get('/dashboard'),
-  verifyAstrologer: (data) => API.post('/dashboard/verified-astrologer', data)
+  verifyAstrologer: (data) => API.post('/dashboard/verified-astrologer', data),
+  getBusinessReport: (params) => API.get('/dashboard/business-report', { params }),
 };
 
 // ==================== CUSTOMERS ====================
@@ -34,7 +35,8 @@ export const astrologerApi = {
   delete: (data) => API.post('/astrologers/delete', data),
   verify: (data) => API.post('/astrologers/verified', data),
   printPdf: (params) => API.get('/astrologers/print', { params, responseType: 'blob' }),
-  exportCsv: (params) => API.get('/astrologers/export-csv', { params, responseType: 'blob' })
+  exportCsv: (params) => API.get('/astrologers/export-csv', { params, responseType: 'blob' }),
+  updateCommission: (data) => API.post('/astrologers/update-commission', data)
 };
 
 // ==================== SKILLS ====================
@@ -350,14 +352,16 @@ export const pujaCategoryApi = {
   getAll: (params) => API.get('/puja/categories', { params }),
   add: (data) => API.post('/puja/categories/add', data),
   edit: (data) => API.post('/puja/categories/edit', data),
-  status: (data) => API.post('/puja/categories/status', data)
+  status: (data) => API.post('/puja/categories/status', data),
+  delete: (data) => API.post('/puja/categories/delete', data)
 };
 
 export const pujaSubCategoryApi = {
   getAll: (params) => API.get('/puja/subcategories', { params }),
   add: (data) => API.post('/puja/subcategories/add', data),
   edit: (data) => API.post('/puja/subcategories/edit', data),
-  status: (data) => API.post('/puja/subcategories/status', data)
+  status: (data) => API.post('/puja/subcategories/status', data),
+  delete: (data) => API.post('/puja/subcategories/delete', data)
 };
 
 // ==================== PUJA MANAGEMENT ====================

@@ -93,6 +93,13 @@ const PujaCategories = () => {
                   <input type="checkbox" checked={!!cat.isActive} onChange={() => handleStatus(cat.id)} />
                   <span>{cat.isActive ? 'Active' : 'Inactive'}</span>
                 </label>
+                <button onClick={async () => {
+                  if (!window.confirm('Delete "' + cat.name + '"? This cannot be undone.')) return;
+                  try {
+                    await pujaCategoryApi.delete({ id: cat.id });
+                    fetchData();
+                  } catch(e) { alert('Failed to delete'); }
+                }} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '5px 14px', borderRadius: 4, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Delete</button>
               </div>
             </div>
           ))}

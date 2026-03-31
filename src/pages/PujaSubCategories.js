@@ -97,7 +97,10 @@ const PujaSubCategories = () => {
     },
     {
       header: 'Actions', render: (row) => (
-        <button onClick={() => openEdit(row)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: 500 }}>Edit</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => openEdit(row)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: 500 }}>Edit</button>
+          <button onClick={async () => { if (!window.confirm('Delete "' + row.name + '"?')) return; try { await pujaSubCategoryApi.delete({ id: row.id }); fetchData(); } catch(e) { alert('Failed'); } }} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontWeight: 500 }}>Delete</button>
+        </div>
       )
     }
   ];

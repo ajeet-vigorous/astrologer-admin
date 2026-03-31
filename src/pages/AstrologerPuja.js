@@ -181,17 +181,18 @@ const AstrologerPuja = () => {
                       <td style={styles.td}>{formatDate(row.puja_start_datetime)}</td>
                       <td style={styles.td}>{row.puja_duration ? `${row.puja_duration} mins` : '--'}</td>
                       <td style={styles.td}>
-                        {isDatePassed(row.puja_start_datetime) ? (
-                          <span style={{ color: '#6b7280', fontSize: 12 }}>Date has been passed</span>
-                        ) : (
-                          <button onClick={() => openApprove(row.id, row.isAdminApproved)}
-                            style={{
-                              background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-                              color: (row.isAdminApproved === 'Pending' || row.isAdminApproved === 'Rejected') ? '#92400e' : '#059669'
-                            }}>
-                            {row.isAdminApproved || 'Pending'}
-                          </button>
-                        )}
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
+                            background: row.isAdminApproved === 'Approved' ? '#d1fae5' : row.isAdminApproved === 'Rejected' ? '#fee2e2' : '#fef3c7',
+                            color: row.isAdminApproved === 'Approved' ? '#065f46' : row.isAdminApproved === 'Rejected' ? '#991b1b' : '#92400e'
+                          }}>{row.isAdminApproved || 'Pending'}</span>
+                          {row.isAdminApproved !== 'Approved' && (
+                            <button onClick={() => openApprove(row.id, 'Rejected')} style={{ background: '#059669', color: '#fff', border: 'none', padding: '4px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>Approve</button>
+                          )}
+                          {row.isAdminApproved !== 'Rejected' && (
+                            <button onClick={() => openApprove(row.id, 'Approved')} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '4px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>Reject</button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

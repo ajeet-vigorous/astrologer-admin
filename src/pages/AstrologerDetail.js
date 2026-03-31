@@ -11,6 +11,8 @@ const AstrologerDetail = () => {
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [totalOrderValue, setTotalOrderValue] = useState('');
   const [saving, setSaving] = useState(false);
+  const [commForm, setCommForm] = useState({ chatCommission: '', callCommission: '', videoCallCommission: '', reportCommission: '', giftCommission: '', pujaCommission: '' });
+  const [commSaving, setCommSaving] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -19,7 +21,17 @@ const AstrologerDetail = () => {
         const result = res.data.result;
         const d = result && result.length > 0 ? result[0] : null;
         setData(d);
-        if (d) setTotalOrderValue(d.totalOrder || 0);
+        if (d) {
+          setTotalOrderValue(d.totalOrder || 0);
+          setCommForm({
+            chatCommission: d.chatCommission ?? '',
+            callCommission: d.callCommission ?? '',
+            videoCallCommission: d.videoCallCommission ?? '',
+            reportCommission: d.reportCommission ?? '',
+            giftCommission: d.giftCommission ?? '',
+            pujaCommission: d.pujaCommission ?? '',
+          });
+        }
       } catch (e) {
         console.error(e);
       }
@@ -109,6 +121,7 @@ const AstrologerDetail = () => {
     { key: 'notification', label: 'Notification List' },
     { key: 'gift', label: 'Gift List' },
     { key: 'reviews', label: `Reviews (${review.length})` },
+    { key: 'commission', label: 'Commission' },
     { key: 'bank', label: 'Bank Details' },
   ];
 
@@ -579,6 +592,41 @@ const AstrologerDetail = () => {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'commission' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h4 style={{ margin: 0 }}>Custom Commission (leave empty for default)</h4>
+              <button onClick={async () => {
+                setCommSaving(true);
+                try {
+                  await astrologerApi.updateCommission({ astrologerId: id, ...commForm });
+                  alert('Commission updated!');
+                } catch(e) { alert('Failed to update'); }
+                setCommSaving(false);
+              }} disabled={commSaving} style={{ background: '#7c3aed', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, fontWeight: 600, cursor: 'pointer', opacity: commSaving ? 0.6 : 1 }}>
+                {commSaving ? 'Saving...' : 'Save Commission'}
+              </button>
+            </div>
+            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>Empty = Global default from System Settings. Set custom value to override for this astrologer only.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {[
+                { key: 'chatCommission', label: 'Chat Commission (%)' },
+                { key: 'callCommission', label: 'Call Commission (%)' },
+                { key: 'videoCallCommission', label: 'Video Call Commission (%)' },
+                { key: 'reportCommission', label: 'Report Commission (%)' },
+                { key: 'giftCommission', label: 'Gift Commission (%)' },
+                { key: 'pujaCommission', label: 'Puja Commission (%)' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 6 }}>{f.label}</label>
+                  <input type="number" min="0" max="100" value={commForm[f.key]} onChange={e => setCommForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                    placeholder="Default" style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }} />
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

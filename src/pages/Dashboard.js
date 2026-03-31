@@ -19,6 +19,18 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 const Dashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [report, setReport] = useState(null);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
+  const fetchReport = (fd, td) => {
+    const params = {};
+    if (fd) params.from_date = fd;
+    if (td) params.to_date = td;
+    dashboardApi.getBusinessReport(params).then(res => setReport(res.data?.data || null)).catch(() => {});
+  };
+
+  useEffect(() => { fetchReport(); }, []);
 
   useEffect(() => {
     dashboardApi.get()
@@ -290,6 +302,146 @@ const Dashboard = () => {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      {/* ========== BUSINESS REPORT ========== */}
+      {report && (
+        <div style={{ marginTop: 30 }}>
+          <div style={{ ...tableContainerStyle, background: 'linear-gradient(135deg, #1a0533, #2d1b69)', color: '#fff', padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+              <h3 style={{ margin: 0, fontSize: 20 }}>Business Report</h3>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', fontSize: 13 }} />
+                <span>to</span>
+                <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', fontSize: 13 }} />
+                <button onClick={() => fetchReport(fromDate, toDate)} style={{ padding: '6px 16px', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Apply</button>
+                <button onClick={() => { setFromDate(''); setToDate(''); fetchReport(); }} style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>Reset</button>
+              </div>
+            </div>
+
+            {/* Summary Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
+              <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 16, textAlign: 'center' }}>
+                <div style={{ fontSize: 12, color: '#c4b5d8', marginBottom: 6 }}>TOTAL RECHARGE</div>
+                <div style={{ fontSize: 24, fontWeight: 700 }}>{'\u20B9'}{report.income?.totalRecharge?.toFixed(2)}</div>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 16, textAlign: 'center' }}>
+                <div style={{ fontSize: 12, color: '#c4b5d8', marginBottom: 6 }}>TOTAL REVENUE</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: '#34d399' }}>{'\u20B9'}{report.revenue?.totalRevenue?.toFixed(2)}</div>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 16, textAlign: 'center' }}>
+                <div style={{ fontSize: 12, color: '#c4b5d8', marginBottom: 6 }}>ADMIN EARNING</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: '#fbbf24' }}>{'\u20B9'}{report.adminEarning?.totalAdminEarning?.toFixed(2)}</div>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 16, textAlign: 'center' }}>
+                <div style={{ fontSize: 12, color: '#c4b5d8', marginBottom: 6 }}>ASTROLOGER PAID</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: '#a78bfa' }}>{'\u20B9'}{report.expenses?.astrologerPaid?.toFixed(2)}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Money Flow */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginTop: 16 }}>
+            {/* Income */}
+            <div style={{ ...tableContainerStyle, borderTop: '4px solid #10b981' }}>
+              <h4 style={{ margin: '0 0 16px', color: '#059669', fontSize: 15 }}>INCOME (Paisa Aaya)</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
+                  <span style={{ color: '#666', fontSize: 13 }}>Chat Revenue ({report.revenue?.chat?.count})</span>
+                  <span style={{ fontWeight: 600, color: '#059669' }}>{'\u20B9'}{report.revenue?.chat?.total?.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
+                  <span style={{ color: '#666', fontSize: 13 }}>Call Revenue ({report.revenue?.call?.count})</span>
+                  <span style={{ fontWeight: 600, color: '#059669' }}>{'\u20B9'}{report.revenue?.call?.total?.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
+                  <span style={{ color: '#666', fontSize: 13 }}>AI Chat ({report.revenue?.aiChat?.count})</span>
+                  <span style={{ fontWeight: 600, color: '#059669' }}>{'\u20B9'}{report.revenue?.aiChat?.total?.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', background: '#f0fdf4', borderRadius: 8, paddingLeft: 10, paddingRight: 10, marginTop: 6 }}>
+                  <span style={{ fontWeight: 700, color: '#059669' }}>Total Revenue</span>
+                  <span style={{ fontWeight: 700, color: '#059669', fontSize: 16 }}>{'\u20B9'}{report.revenue?.totalRevenue?.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Admin Commission */}
+            <div style={{ ...tableContainerStyle, borderTop: '4px solid #f59e0b' }}>
+              <h4 style={{ margin: '0 0 16px', color: '#d97706', fontSize: 15 }}>ADMIN COMMISSION</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
+                  <span style={{ color: '#666', fontSize: 13 }}>Chat Commission (30%)</span>
+                  <span style={{ fontWeight: 600, color: '#d97706' }}>{'\u20B9'}{report.adminEarning?.chatCommission?.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
+                  <span style={{ color: '#666', fontSize: 13 }}>Call Commission (30%)</span>
+                  <span style={{ fontWeight: 600, color: '#d97706' }}>{'\u20B9'}{report.adminEarning?.callCommission?.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
+                  <span style={{ color: '#666', fontSize: 13 }}>AI Chat (100%)</span>
+                  <span style={{ fontWeight: 600, color: '#d97706' }}>{'\u20B9'}{report.adminEarning?.aiChatRevenue?.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', background: '#fffbeb', borderRadius: 8, paddingLeft: 10, paddingRight: 10, marginTop: 6 }}>
+                  <span style={{ fontWeight: 700, color: '#d97706' }}>Total Admin Earning</span>
+                  <span style={{ fontWeight: 700, color: '#d97706', fontSize: 16 }}>{'\u20B9'}{report.adminEarning?.totalAdminEarning?.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Expenses */}
+            <div style={{ ...tableContainerStyle, borderTop: '4px solid #ef4444' }}>
+              <h4 style={{ margin: '0 0 16px', color: '#dc2626', fontSize: 15 }}>EXPENSES (Paisa Gaya)</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
+                  <span style={{ color: '#666', fontSize: 13 }}>Astrologer Paid</span>
+                  <span style={{ fontWeight: 600, color: '#dc2626' }}>{'\u20B9'}{report.expenses?.astrologerPaid?.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
+                  <span style={{ color: '#666', fontSize: 13 }}>Withdrawals Released</span>
+                  <span style={{ fontWeight: 600, color: '#dc2626' }}>{'\u20B9'}{report.expenses?.withdrawReleased?.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
+                  <span style={{ color: '#666', fontSize: 13 }}>Withdrawals Pending</span>
+                  <span style={{ fontWeight: 600, color: '#f59e0b' }}>{'\u20B9'}{report.expenses?.withdrawPending?.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Transactions */}
+          <div style={{ ...tableContainerStyle, marginTop: 16 }}>
+            <h4 style={{ margin: '0 0 16px', fontSize: 15 }}>Recent Transactions</h4>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#f8f9fa' }}>
+                  <th style={thStyle}>Date</th>
+                  <th style={thStyle}>Type</th>
+                  <th style={thStyle}>Customer</th>
+                  <th style={thStyle}>Astrologer</th>
+                  <th style={thStyle}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(report.recentTransactions || []).map((t, i) => (
+                  <tr key={i}>
+                    <td style={tdStyle}>{t.created_at ? new Date(t.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '-'}</td>
+                    <td style={tdStyle}>
+                      <span style={{ padding: '2px 10px', borderRadius: 10, fontSize: 12, fontWeight: 600,
+                        background: t.type === 'Chat' ? '#eff6ff' : t.type === 'Call' ? '#f0fdf4' : '#fef3c7',
+                        color: t.type === 'Chat' ? '#2563eb' : t.type === 'Call' ? '#059669' : '#d97706'
+                      }}>{t.type}</span>
+                    </td>
+                    <td style={tdStyle}>{t.userName || '-'}</td>
+                    <td style={tdStyle}>{t.astrologerName || '-'}</td>
+                    <td style={{ ...tdStyle, fontWeight: 600, color: '#059669' }}>{'\u20B9'}{parseFloat(t.amount || 0).toFixed(2)}</td>
+                  </tr>
+                ))}
+                {(!report.recentTransactions || report.recentTransactions.length === 0) && (
+                  <tr><td colSpan={5} style={{ ...tdStyle, textAlign: 'center', color: '#9ca3af', padding: 20 }}>No transactions found</td></tr>
+                )}
               </tbody>
             </table>
           </div>
