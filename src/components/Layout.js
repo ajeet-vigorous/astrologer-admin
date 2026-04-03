@@ -14,7 +14,6 @@ const menuItems = [
     { title: 'Gifts', path: '/admin/gifts' },
     { title: 'Skills', path: '/admin/skills' },
     { title: 'Categories', path: '/admin/astrologer-categories' },
-    { title: 'Commission Rate', path: '/admin/commissions' },
     { title: 'Profile Boost Settings', path: '/admin/profile-boost-list' },
     { title: 'Profile Boost History', path: '/admin/profile-boost-history' },
     { title: 'Astrologer Assistant', path: '/admin/astrologer-assistants' },

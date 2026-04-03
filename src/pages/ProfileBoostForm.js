@@ -8,8 +8,6 @@ const ProfileBoostForm = () => {
   const isEdit = !!id;
 
   const [form, setForm] = useState({
-    chat_commission: '',
-    call_commission: '',
     profile_boost: '',
     profile_boost_benefits: []
   });
@@ -19,8 +17,6 @@ const ProfileBoostForm = () => {
       profileBoostApi.edit(id).then(res => {
         const pb = res.data.profileBoost;
         setForm({
-          chat_commission: pb.chat_commission || '',
-          call_commission: pb.call_commission || '',
           profile_boost: pb.profile_boost || '',
           profile_boost_benefits: Array.isArray(pb.profile_boost_benefits) ? pb.profile_boost_benefits : []
         });
@@ -60,38 +56,29 @@ const ProfileBoostForm = () => {
     <div style={styles.container}>
       <div style={styles.card}>
         <div style={styles.header}>
-          <h2 style={{ margin: 0, fontSize: 16 }}>Profile Boost</h2>
+          <h2 style={{ margin: 0, fontSize: 16 }}>Profile Boost Settings</h2>
         </div>
         <form onSubmit={handleSubmit} style={{ padding: 20 }}>
           <div style={styles.row}>
             <div style={styles.col}>
-              <label style={styles.label}>Chat Commission</label>
-              <input type="text" value={form.chat_commission} onChange={e => setForm({ ...form, chat_commission: e.target.value })}
-                placeholder="Enter Chat Commission" style={styles.input} required />
+              <label style={styles.label}>Monthly Boost Limit (per astrologer)</label>
+              <input type="number" value={form.profile_boost} onChange={e => setForm({ ...form, profile_boost: e.target.value })}
+                placeholder="e.g. 10" style={styles.input} required />
+              <span style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>How many times an astrologer can boost per month</span>
             </div>
             <div style={styles.col}>
-              <label style={styles.label}>Call Commission</label>
-              <input type="text" value={form.call_commission} onChange={e => setForm({ ...form, call_commission: e.target.value })}
-                placeholder="Enter Call Commission" style={styles.input} required />
-            </div>
-          </div>
-
-          <div style={styles.row}>
-            <div style={styles.col}>
-              <label style={styles.label}>Profile Monthly Boost</label>
-              <input type="text" value={form.profile_boost} onChange={e => setForm({ ...form, profile_boost: e.target.value })}
-                placeholder="Enter Profile Monthly Boost" style={styles.input} />
+              <label style={styles.label}>Boost Price</label>
+              <p style={{ margin: '8px 0', color: '#7c3aed', fontWeight: 600 }}>Managed in General Settings → "Profile Boost Price"</p>
             </div>
           </div>
 
           <div style={{ border: '1px solid #d1d5db', borderRadius: 8, padding: 16, marginTop: 20 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 500, margin: 0 }}>Profile Boost Benefits</h3>
-            <button type="button" onClick={addBenefit} style={{ ...styles.addBtn, marginTop: 12 }}>+ Add Benefit</button>
+            <h3 style={{ fontSize: 16, fontWeight: 500, margin: '0 0 12px' }}>Profile Boost Benefits (shown to astrologers)</h3>
+            <button type="button" onClick={addBenefit} style={{ ...styles.addBtn, marginBottom: 12 }}>+ Add Benefit</button>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               {form.profile_boost_benefits.map((benefit, i) => (
                 <div key={i} style={{ position: 'relative', border: '1px solid #d1d5db', padding: 16, borderRadius: 8 }}>
-                  <h4 style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}>Benefit</h4>
                   <textarea value={benefit} onChange={e => updateBenefit(i, e.target.value)}
                     placeholder="Enter benefit description" style={{ ...styles.input, minHeight: 80, resize: 'vertical' }} />
                   <button type="button" onClick={() => removeBenefit(i)}
@@ -102,7 +89,7 @@ const ProfileBoostForm = () => {
           </div>
 
           <div style={{ marginTop: 20 }}>
-            <button type="submit" style={styles.addBtn}>Submit</button>
+            <button type="submit" style={styles.addBtn}>Save Settings</button>
           </div>
         </form>
       </div>
@@ -116,9 +103,9 @@ const styles = {
   header: { padding: '16px 20px', borderBottom: '1px solid #e5e7eb' },
   row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 12 },
   col: { display: 'flex', flexDirection: 'column' },
-  label: { fontSize: 13, fontWeight: 500, marginBottom: 4 },
-  input: { width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' },
-  addBtn: { background: '#3b82f6', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }
+  label: { fontSize: 13, fontWeight: 600, marginBottom: 4, color: '#374151' },
+  input: { width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' },
+  addBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }
 };
 
 export default ProfileBoostForm;

@@ -11,6 +11,10 @@ const PendingAstrologers = () => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showInterview, setShowInterview] = useState(null);
+  const [interviewDate, setInterviewDate] = useState('');
+  const [showReject, setShowReject] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
   const navigate = useNavigate();
 
   const fetchData = async () => {
@@ -90,14 +94,29 @@ const PendingAstrologers = () => {
     { header: 'Live', render: (row) => <ToggleSwitch checked={row.live_sections == 1} onChange={() => handleSectionToggle(row.id, 'live_sections', row.live_sections)} /> },
     { header: 'Created', render: (row) => row.created_at ? new Date(row.created_at).toLocaleDateString('en-IN') : '-' },
     {
+      header: 'Interview', render: (row) => {
+        if (row.interviewStatus === 'Scheduled') return <span style={{ color: '#d97706', fontWeight: 600, fontSize: 12 }}>📅 {row.interviewDate ? new Date(row.interviewDate).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Scheduled'}</span>;
+        if (row.interviewStatus === 'Rejected') return <span style={{ color: '#dc2626', fontWeight: 600, fontSize: 12 }}>❌ Rejected</span>;
+        return <span style={{ color: '#9ca3af', fontSize: 12 }}>Not scheduled</span>;
+      }
+    },
+    {
       header: 'Actions', render: (row) => (
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={() => handleVerify(row.id)}
-            style={{ background: '#10b981', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>Verify</button>
-          <button onClick={() => navigate(`/admin/astrologers/edit/${row.id}`)}
-            style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>Edit</button>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {!row.interviewStatus && (
+            <button onClick={() => { setShowInterview(row.id); setInterviewDate(''); }}
+              style={{ background: '#f59e0b', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>Schedule</button>
+          )}
+          {row.interviewStatus === 'Scheduled' && (
+            <button onClick={() => handleVerify(row.id)}
+              style={{ background: '#10b981', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>Approve</button>
+          )}
+          {row.interviewStatus !== 'Rejected' && (
+            <button onClick={() => { setShowReject(row.id); setRejectReason(''); }}
+              style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>Reject</button>
+          )}
           <button onClick={() => navigate(`/admin/astrologers/${row.id}`)}
-            style={{ background: '#059669', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>View</button>
+            style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 11 }}>View</button>
         </div>
       )
     }
@@ -124,6 +143,48 @@ const PendingAstrologers = () => {
         onSearch={(val) => { setSearch(val); setPage(1); }}
         searchValue={search}
       />
+
+      {/* Schedule Interview Modal */}
+      {showInterview && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowInterview(null)}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 24, maxWidth: 400, width: '90%' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 16px' }}>Schedule Interview</h3>
+            <input type="datetime-local" value={interviewDate} onChange={e => setInterviewDate(e.target.value)}
+              style={{ width: '100%', padding: 10, border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, marginBottom: 16, boxSizing: 'border-box' }} />
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={async () => {
+                if (!interviewDate) { alert('Select date & time'); return; }
+                try {
+                  await astrologerApi.editTotalOrder({ astrologerId: showInterview, interviewDate, interviewStatus: 'Scheduled' });
+                  setShowInterview(null); fetchData(); alert('Interview scheduled!');
+                } catch(e) { alert('Failed'); }
+              }} style={{ flex: 1, background: '#7c3aed', color: '#fff', border: 'none', padding: 10, borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}>Schedule</button>
+              <button onClick={() => setShowInterview(null)} style={{ flex: 1, background: '#f3f4f6', color: '#374151', border: 'none', padding: 10, borderRadius: 6, cursor: 'pointer' }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      {showReject && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowReject(null)}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 24, maxWidth: 400, width: '90%' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 16px', color: '#dc2626' }}>Reject Astrologer</h3>
+            <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Enter rejection reason..." rows={3}
+              style={{ width: '100%', padding: 10, border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, marginBottom: 16, boxSizing: 'border-box', resize: 'none' }} />
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={async () => {
+                if (!rejectReason.trim()) { alert('Enter reason'); return; }
+                try {
+                  await astrologerApi.editTotalOrder({ astrologerId: showReject, interviewStatus: 'Rejected', rejectionReason: rejectReason });
+                  setShowReject(null); fetchData(); alert('Astrologer rejected');
+                } catch(e) { alert('Failed'); }
+              }} style={{ flex: 1, background: '#dc2626', color: '#fff', border: 'none', padding: 10, borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}>Reject</button>
+              <button onClick={() => setShowReject(null)} style={{ flex: 1, background: '#f3f4f6', color: '#374151', border: 'none', padding: 10, borderRadius: 6, cursor: 'pointer' }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

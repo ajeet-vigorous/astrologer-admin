@@ -190,6 +190,14 @@ const SystemFlags = () => {
         { label: '100ms', val: 'hms' }
       ];
     }
+    // Geocode provider
+    if (flagName === 'geocode_provider') {
+      return [
+        { label: 'Photon (Free)', val: 'photon' },
+        { label: 'Google Maps', val: 'google' },
+        { label: 'OpenStreetMap', val: 'osm' }
+      ];
+    }
     // Default for payment subgroup radios
     if (groupIndex !== undefined) {
       return [{ label: 'Razor Pay', val: 'RazorPay' }, { label: 'Stripe', val: 'Stripe' }];
