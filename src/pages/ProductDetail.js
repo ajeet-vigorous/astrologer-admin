@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { astroMallApi } from '../api/services';
+import Loader from '../components/Loader';
+import '../styles/CustomerDetail.css';
+
+import getImgSrc from '../utils/getImageUrl';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -25,13 +29,13 @@ const ProductDetail = () => {
     loadData();
   }, [id]);
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>Loading...</div>;
-  if (!product) return <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>Product not found</div>;
+  if (loading) return <Loader text="Loading..." />;
+  if (!product) return <div className="cd-empty">Product not found</div>;
 
   const getImageSrc = (img) => {
     if (!img) return null;
     if (img.startsWith('http')) return img;
-    return '/' + img;
+    if (img.startsWith('public/')) return '/' + img; return '/public/' + img;
   };
 
   const imgSrc = getImageSrc(product.productImage || product.image);
@@ -66,59 +70,84 @@ const ProductDetail = () => {
   };
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      {/* Header */}
-      <div style={styles.headerRow}>
-        <h2 style={styles.title}>Product Details</h2>
-        <button onClick={() => navigate('/admin/astromall/products')} style={styles.backBtn}>Back</button>
+    <div className="cd-page">
+      {/* Product Hero Card */}
+      <div className="cd-hero" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div style={{ width: 200, height: 200, borderRadius: 12, overflow: 'hidden', background: '#e2e8f0', flexShrink: 0 }}>
+          {imgSrc ? (
+            <img
+              src={imgSrc}
+              alt={product.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
+          ) : (
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 16 }}>No Image</div>
+          )}
+        </div>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <h2 className="cd-hero-name" style={{ fontSize: 22, marginBottom: 8 }}>{product.name}</h2>
+          {product.features && (
+            <p style={{ margin: '0 0 12px', color: 'rgba(255,255,255,0.7)', fontSize: 14, lineHeight: 1.6 }}>{product.features}</p>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 22, fontWeight: 700, color: '#a78bfa' }}>&#8377;</span>
+            <span style={{ fontSize: 22, fontWeight: 700, color: '#fff' }}>{product.amount || '0'}</span>
+          </div>
+          {product.usd_amount && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+              <span style={{ fontSize: 22, fontWeight: 700, color: '#a78bfa' }}>$</span>
+              <span style={{ fontSize: 22, fontWeight: 700, color: '#fff' }}>{product.usd_amount}</span>
+            </div>
+          )}
+          <button
+            onClick={() => navigate('/admin/astromall/products')}
+            className="ad-edit-btn"
+            style={{ marginTop: 16 }}
+          >
+            Back to Products
+          </button>
+        </div>
       </div>
 
-      {/* Product Card */}
-      <div style={styles.card}>
-        <div style={styles.productRow}>
-          {/* Left: Image */}
-          <div style={styles.productImageWrap}>
-            {imgSrc ? (
-              <img
-                src={imgSrc}
-                alt={product.name}
-                style={styles.productImage}
-                onError={(e) => { e.target.style.display = 'none'; }}
-              />
-            ) : (
-              <div style={styles.imagePlaceholder}>No Image</div>
-            )}
-          </div>
-          {/* Right: Info */}
-          <div style={styles.productInfo}>
-            <h2 style={{ margin: '0 0 10px', fontSize: 24, color: '#1f2937' }}>{product.name}</h2>
-            {product.features && (
-              <p style={{ margin: '0 0 10px', color: '#6b7280', fontSize: 15, lineHeight: 1.6 }}>{product.features}</p>
-            )}
-            <div style={styles.priceRow}>
-              <span style={styles.currencySymbol}>&#8377;</span>
-              <span style={styles.priceText}>{product.amount || '0'}</span>
-            </div>
-            {product.usd_amount && (
-              <div style={{ ...styles.priceRow, marginTop: 4 }}>
-                <span style={styles.currencySymbol}>$</span>
-                <span style={styles.priceText}>{product.usd_amount}</span>
-              </div>
-            )}
-          </div>
+      {/* Product Info Card */}
+      <div className="cd-info-card" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', padding: '0 18px' }}>
+        <div className="cd-irow">
+          <span className="cd-irow-label">Name</span>
+          <span className="cd-irow-value">{product.name}</span>
         </div>
+        <div className="cd-irow">
+          <span className="cd-irow-label">Category</span>
+          <span className="cd-irow-value">{product.productCategory?.name || product.categoryName || '-'}</span>
+        </div>
+        <div className="cd-irow">
+          <span className="cd-irow-label">Amount (INR)</span>
+          <span className="cd-irow-value">&#8377; {product.amount || '0'}</span>
+        </div>
+        {product.usd_amount && (
+          <div className="cd-irow">
+            <span className="cd-irow-label">Amount (USD)</span>
+            <span className="cd-irow-value">$ {product.usd_amount}</span>
+          </div>
+        )}
+        {product.features && (
+          <div className="cd-irow">
+            <span className="cd-irow-label">Features</span>
+            <span className="cd-irow-value" style={{ textAlign: 'right', maxWidth: '60%' }}>{product.features}</span>
+          </div>
+        )}
       </div>
 
       {/* Q&A Section */}
       {questionAnswer.length > 0 && (
-        <div style={{ marginTop: 25 }}>
-          <h3 style={{ margin: '0 0 15px', fontSize: 18, color: '#1f2937' }}>Questions & Answers</h3>
+        <div className="cd-content">
+          <div className="ad-section-title">Questions & Answers</div>
           {questionAnswer.map((qa, idx) => (
-            <div key={qa.id || idx} style={styles.qaCard}>
-              <div style={styles.qaQuestion}>
+            <div key={qa.id || idx} className="cd-item-card" style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 14, color: '#0f172a', marginBottom: 6, lineHeight: 1.5 }}>
                 <strong>Q:</strong> {qa.question}
               </div>
-              <div style={styles.qaAnswer}>
+              <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>
                 <strong>A:</strong> {qa.answer}
               </div>
             </div>
@@ -128,66 +157,47 @@ const ProductDetail = () => {
 
       {/* Reviews Section */}
       {productReview.length > 0 && (
-        <div style={{ marginTop: 25 }}>
-          <h3 style={{ margin: '0 0 15px', fontSize: 18, color: '#1f2937' }}>Reviews</h3>
-          {productReview.map((review, idx) => {
-            const profileImg = review.userProfile || review.profileImage;
-            return (
-              <div key={review.id || idx} style={styles.reviewCard}>
-                <div style={styles.reviewHeader}>
-                  <div style={styles.reviewUserRow}>
-                    {profileImg ? (
-                      <img
-                        src={profileImg.startsWith('http') ? profileImg : '/' + profileImg}
-                        alt=""
-                        style={styles.reviewAvatar}
-                        onError={(e) => { e.target.style.display = 'none'; }}
-                      />
-                    ) : (
-                      <div style={styles.reviewAvatarPlaceholder}>
-                        {(review.userName || review.name || 'U').charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <div>
-                      <div style={{ fontWeight: 600, color: '#1f2937', fontSize: 15 }}>{review.userName || review.name || 'User'}</div>
-                      <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{formatDate(review.created_at || review.createdAt)}</div>
+        <div className="cd-content">
+          <div className="ad-section-title">Reviews</div>
+          <div className="ad-review-list">
+            {productReview.map((review, idx) => {
+              const profileImg = review.userProfile || review.profileImage;
+              return (
+                <div key={review.id || idx} className="ad-review-card">
+                  {profileImg ? (
+                    <img
+                      src={profileImg.startsWith('http') ? profileImg : '/' + profileImg}
+                      alt=""
+                      className="ad-review-avatar"
+                      style={{ objectFit: 'cover' }}
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div className="ad-review-avatar">
+                      {(review.userName || review.name || 'U').charAt(0).toUpperCase()}
                     </div>
+                  )}
+                  <div className="ad-review-body">
+                    <div className="ad-review-top">
+                      <span className="ad-review-name">{review.userName || review.name || 'User'}</span>
+                      <span style={{ fontSize: 12, color: '#94a3b8' }}>{formatDate(review.created_at || review.createdAt)}</span>
+                    </div>
+                    <div className="ad-review-stars">
+                      {renderStars(review.rating)}
+                      <span className="ad-review-rating">{review.rating}/5</span>
+                    </div>
+                    {review.review && (
+                      <p className="ad-review-text">{review.review}</p>
+                    )}
                   </div>
-                  <div>{renderStars(review.rating)}</div>
                 </div>
-                {review.review && (
-                  <p style={{ margin: '10px 0 0', color: '#374151', fontSize: 14, lineHeight: 1.6 }}>{review.review}</p>
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
   );
-};
-
-const styles = {
-  headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  title: { margin: 0, fontSize: 22, fontWeight: 600, color: '#1f2937' },
-  backBtn: { background: '#6b7280', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 500, fontSize: 14 },
-  card: { background: '#fff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
-  productRow: { display: 'flex', gap: 25, padding: 20, flexWrap: 'wrap' },
-  productImageWrap: { width: 280, height: 280, borderRadius: 10, overflow: 'hidden', background: '#e5e7eb', flexShrink: 0 },
-  productImage: { width: '100%', height: '100%', objectFit: 'cover' },
-  imagePlaceholder: { width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: 16 },
-  productInfo: { flex: 1, minWidth: 200 },
-  priceRow: { display: 'flex', alignItems: 'center', gap: 4 },
-  currencySymbol: { fontSize: 20, fontWeight: 700, color: '#7c3aed' },
-  priceText: { fontSize: 20, fontWeight: 700, color: '#1f2937' },
-  qaCard: { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: 16, marginBottom: 12 },
-  qaQuestion: { fontSize: 15, color: '#1f2937', marginBottom: 8, lineHeight: 1.5 },
-  qaAnswer: { fontSize: 14, color: '#6b7280', lineHeight: 1.5 },
-  reviewCard: { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: 16, marginBottom: 12 },
-  reviewHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 },
-  reviewUserRow: { display: 'flex', alignItems: 'center', gap: 12 },
-  reviewAvatar: { width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' },
-  reviewAvatarPlaceholder: { width: 40, height: 40, borderRadius: '50%', background: '#7c3aed', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16 }
 };
 
 export default ProductDetail;

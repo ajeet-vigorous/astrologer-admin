@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { astrologerApi } from '../api/services';
+import Loader from '../components/Loader';
+import { Eye, Phone, MessageSquare, Wallet, FileText, Heart, Bell, Gift, Star, Landmark, Percent, ChevronDown, Contact, UserRound, Sparkles, Clock, IndianRupee, Pencil, X } from 'lucide-react';
+import formatNumber from '../utils/formatNumber';
+import '../styles/CustomerDetail.css';
+
+const fallbackSvg = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="%23e5e7eb" rx="20"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="16" fill="%23999">?</text></svg>';
 
 const AstrologerDetail = () => {
   const { id } = useParams();
@@ -8,6 +14,7 @@ const AstrologerDetail = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('basic');
+  const [openAccordion, setOpenAccordion] = useState(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [totalOrderValue, setTotalOrderValue] = useState('');
   const [saving, setSaving] = useState(false);
@@ -24,24 +31,19 @@ const AstrologerDetail = () => {
         if (d) {
           setTotalOrderValue(d.totalOrder || 0);
           setCommForm({
-            chatCommission: d.chatCommission ?? '',
-            callCommission: d.callCommission ?? '',
-            videoCallCommission: d.videoCallCommission ?? '',
-            reportCommission: d.reportCommission ?? '',
-            giftCommission: d.giftCommission ?? '',
-            pujaCommission: d.pujaCommission ?? '',
+            chatCommission: d.chatCommission ?? '', callCommission: d.callCommission ?? '',
+            videoCallCommission: d.videoCallCommission ?? '', reportCommission: d.reportCommission ?? '',
+            giftCommission: d.giftCommission ?? '', pujaCommission: d.pujaCommission ?? '',
           });
         }
-      } catch (e) {
-        console.error(e);
-      }
+      } catch (e) { console.error(e); }
       setLoading(false);
     };
     fetchData();
   }, [id]);
 
-  if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Loading astrologer details...</div>;
-  if (!data) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>Astrologer not found.</div>;
+  if (loading) return <Loader text="Loading astrologer details..." />;
+  if (!data) return <div className="cd-empty">Astrologer not found.</div>;
 
   const chatHistory = data.chatHistory || [];
   const callHistory = data.callHistory || [];
@@ -54,9 +56,6 @@ const AstrologerDetail = () => {
   const availability = data.astrologerAvailability || [];
   const bankDetails = data.bankDetails || {};
   const review = data.review || [];
-
-  const totalChatMinutes = data.chatMin || 0;
-  const totalCallMinutes = data.callMin || 0;
 
   const profileImg = data.profileImage
     ? (data.profileImage.startsWith('http') ? data.profileImage : `/public/storage/images/${data.profileImage}`)
@@ -72,29 +71,24 @@ const AstrologerDetail = () => {
     if (!d) return '-';
     const dt = new Date(d);
     if (isNaN(dt.getTime())) return d;
-    let hr = dt.getHours();
-    const min = String(dt.getMinutes()).padStart(2, '0');
-    const ampm = hr >= 12 ? 'pm' : 'am';
-    hr = hr % 12 || 12;
+    let hr = dt.getHours(); const min = String(dt.getMinutes()).padStart(2, '0');
+    const ampm = hr >= 12 ? 'pm' : 'am'; hr = hr % 12 || 12;
     return `${formatDate(d)} ${hr}:${min} ${ampm}`;
   };
 
-  const renderSkills = (skills) => {
-    if (!skills) return '-';
-    if (Array.isArray(skills)) return skills.map(s => s.name || s).join(', ') || '-';
-    return skills;
+  const renderList = (val) => {
+    if (!val) return '-';
+    if (Array.isArray(val)) return val.map(v => v.name || v.languageName || v).join(', ') || '-';
+    return val;
   };
 
-  const renderLanguages = (langs) => {
-    if (!langs) return '-';
-    if (Array.isArray(langs)) return langs.map(l => l.languageName || l).join(', ') || '-';
-    return langs;
-  };
-
-  const renderCategories = (cats) => {
-    if (!cats) return '-';
-    if (Array.isArray(cats)) return cats.map(c => c.name || c).join(', ') || '-';
-    return cats;
+  const statusClass = (status) => {
+    if (!status) return 'cd-badge-default';
+    const s = status.toLowerCase();
+    if (['completed', 'success', 'accepted', 'approved', 'active'].includes(s)) return 'cd-badge-green';
+    if (['cancelled', 'failed', 'rejected'].includes(s)) return 'cd-badge-red';
+    if (['pending', 'waiting', 'processing'].includes(s)) return 'cd-badge-yellow';
+    return 'cd-badge-default';
   };
 
   const handleSaveTotalOrder = async () => {
@@ -103,488 +97,388 @@ const AstrologerDetail = () => {
       await astrologerApi.editTotalOrder({ id, totalOrder: totalOrderValue });
       setData(prev => ({ ...prev, totalOrder: totalOrderValue }));
       setShowOrderModal(false);
-    } catch (e) {
-      console.error(e);
-      alert('Failed to update total order.');
-    }
+    } catch (e) { alert('Failed to update total order.'); }
     setSaving(false);
   };
 
+  const imgSrc = (img) => img ? (img.startsWith('http') ? img : `/public/storage/images/${img}`) : fallbackSvg;
+
+  const stats = [
+    { label: 'Orders', value: data.totalOrder || 0, color: '#7c3aed', bg: '#f5f3ff' },
+    { label: 'Followers', value: data.totalFollower || 0, color: '#dc2626', bg: '#fef2f2' },
+    { label: 'Chat Min', value: formatNumber(data.chatMin || 0), color: '#2563eb', bg: '#eff6ff' },
+    { label: 'Call Min', value: formatNumber(data.callMin || 0), color: '#059669', bg: '#ecfdf5' },
+    { label: 'Reviews', value: review.length, color: '#d97706', bg: '#fffbeb' },
+  ];
+
   const tabs = [
-    { key: 'basic', label: 'Basic Detail' },
-    { key: 'wallet', label: 'Wallet' },
-    { key: 'chat', label: 'Chat History' },
-    { key: 'call', label: 'Call History' },
-    { key: 'report', label: 'Report' },
-    { key: 'puja', label: 'Puja Orders' },
-    { key: 'followers', label: 'Followers List' },
-    { key: 'notification', label: 'Notification List' },
-    { key: 'gift', label: 'Gift List' },
-    { key: 'reviews', label: `Reviews (${review.length})` },
-    { key: 'commission', label: 'Commission' },
-    { key: 'bank', label: 'Bank Details' },
+    { key: 'basic', label: 'Details', icon: UserRound },
+    { key: 'wallet', label: 'Wallet', icon: Wallet, count: wallet.length },
+    { key: 'chat', label: 'Chats', icon: MessageSquare, count: chatHistory.length },
+    { key: 'call', label: 'Calls', icon: Phone, count: callHistory.length },
+    { key: 'report', label: 'Reports', icon: FileText, count: reportHistory.length },
+    { key: 'puja', label: 'Puja', icon: Heart, count: pujaOrders.length },
+    { key: 'followers', label: 'Followers', icon: Heart, count: followers.length },
+    { key: 'notification', label: 'Alerts', icon: Bell, count: notifications.length },
+    { key: 'gift', label: 'Gifts', icon: Gift, count: gifts.length },
+    { key: 'reviews', label: 'Reviews', icon: Star, count: review.length },
+    { key: 'commission', label: 'Commission', icon: Percent },
+    { key: 'bank', label: 'Bank', icon: Landmark },
   ];
 
   return (
-    <div>
-      {/* Page Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 20 }}>
-        <button onClick={() => navigate('/admin/astrologers')} style={backBtn}>&larr; Back</button>
-        <h2 style={{ margin: 0 }}>Astrologer Detail</h2>
-      </div>
-
-      {/* Profile Header Section */}
-      <div style={{ ...sectionStyle, display: 'flex', gap: 25, flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          {profileImg ? (
-            <img src={profileImg} alt={data.name}
-              style={{ width: 100, height: 100, borderRadius: '50%', objectFit: 'cover', border: '3px solid #e5e7eb' }}
-              onError={e => { e.target.src = fallbackSvg; }} />
-          ) : (
-            <div style={{ width: 100, height: 100, borderRadius: '50%', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, color: '#999' }}>
-              {data.name ? data.name.charAt(0).toUpperCase() : '?'}
-            </div>
-          )}
-        </div>
-        <div style={{ flex: 1, minWidth: 250 }}>
-          <h3 style={{ margin: '0 0 5px' }}>{data.name}</h3>
-          <div style={{ fontSize: 13, color: '#666', marginBottom: 3 }}>Contact: {data.contactNo || '-'}</div>
-          <div style={{ fontSize: 13, color: '#666', marginBottom: 3 }}>Email: {data.email || '-'}</div>
-          <div style={{ fontSize: 13, color: '#666', marginBottom: 3 }}>WhatsApp: {data.whatsappNo || data.whatsAppNo || '-'}</div>
-          <div style={{ fontSize: 13, color: '#666', marginBottom: 3 }}>Aadhar No: {data.aadharNo || data.aadharNumber || '-'}</div>
-          <div style={{ fontSize: 13, color: '#666' }}>Pan No: {data.panNo || data.panNumber || '-'}</div>
-        </div>
-      </div>
-
-      {/* Stat Cards Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 15, marginBottom: 20 }}>
-        {/* Total Order */}
-        <div style={statCardStyle}>
-          <div style={{ fontSize: 12, color: '#888', fontWeight: 500, marginBottom: 6 }}>Total Order</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: '#333' }}>{data.totalOrder || 0}</div>
-          <button onClick={() => { setTotalOrderValue(data.totalOrder || 0); setShowOrderModal(true); }}
-            style={{ marginTop: 8, background: '#7c3aed', color: '#fff', border: 'none', padding: '5px 14px', borderRadius: 4, cursor: 'pointer', fontSize: 11, fontWeight: 500 }}>
-            Edit
-          </button>
-        </div>
-        {/* Total Followers */}
-        <div style={statCardStyle}>
-          <div style={{ fontSize: 12, color: '#888', fontWeight: 500, marginBottom: 6 }}>Total Followers</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: '#333' }}>{data.totalFollower || 0}</div>
-        </div>
-        {/* Total Chat Minutes */}
-        <div style={statCardStyle}>
-          <div style={{ fontSize: 12, color: '#888', fontWeight: 500, marginBottom: 6 }}>Total Chat Minutes</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: '#333' }}>{totalChatMinutes}</div>
-        </div>
-        {/* Total Call Minutes */}
-        <div style={statCardStyle}>
-          <div style={{ fontSize: 12, color: '#888', fontWeight: 500, marginBottom: 6 }}>Total Call Minutes</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: '#333' }}>{totalCallMinutes}</div>
-        </div>
-      </div>
-
-      {/* 10 Tabs */}
-      <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #e5e7eb', overflowX: 'auto', background: '#fff', borderRadius: '10px 10px 0 0' }}>
-        {tabs.map(tab => (
-          <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-            style={{
-              padding: '12px 18px', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
-              background: activeTab === tab.key ? '#fff' : '#f8f9fa',
-              color: activeTab === tab.key ? '#7c3aed' : '#666',
-              borderBottom: activeTab === tab.key ? '3px solid #7c3aed' : '3px solid transparent',
-              whiteSpace: 'nowrap'
-            }}>
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab Content */}
-      <div style={{ ...sectionStyle, borderTopLeftRadius: 0, borderTopRightRadius: 0, marginTop: 0 }}>
-
-        {/* 1. Basic Detail Tab */}
-        {activeTab === 'basic' && (
-          <div>
-            <h4 style={{ marginTop: 0, marginBottom: 15 }}>Personal Information</h4>
-            <InfoRow label="Skills" value={renderSkills(data.allSkill)} />
-            <InfoRow label="Gender" value={data.gender} />
-            <InfoRow label="Date of Birth" value={formatDate(data.birthDate || data.dateOfBirth)} />
-            <InfoRow label="Category" value={renderCategories(data.astrologerCategoryId)} />
-            <InfoRow label="Primary Skill" value={renderSkills(data.primarySkill)} />
-            <InfoRow label="All Skills" value={renderSkills(data.allSkill)} />
-            <InfoRow label="Languages" value={renderLanguages(data.languageKnown)} />
-
-            <h4 style={{ marginTop: 20, marginBottom: 15 }}>Charges</h4>
-            <InfoRow label="Call Rate" value={data.charge ? '\u20B9' + data.charge + '/min' : '-'} />
-            <InfoRow label="Video Call Rate" value={data.videoCallRate ? '\u20B9' + data.videoCallRate + '/min' : '-'} />
-            <InfoRow label="Report Rate" value={data.reportRate ? '\u20B9' + data.reportRate : '-'} />
-
-            <h4 style={{ marginTop: 20, marginBottom: 15 }}>Professional Information</h4>
-            <InfoRow label="Experience (Years)" value={data.experienceInYears} />
-            <InfoRow label="Daily Contribution Hours" value={data.dailyContribution} />
-            <InfoRow label="App Reference" value={data.appReference || data.hearAboutAstroguru} />
-
-            <h4 style={{ marginTop: 20, marginBottom: 15 }}>Login Bio</h4>
-            <div style={{ padding: '10px 0', fontSize: 13, color: '#333', lineHeight: 1.6 }}>
-              {data.loginBio || '-'}
-            </div>
-
-            {/* Availability Schedule */}
-            <h4 style={{ marginTop: 20, marginBottom: 15 }}>Availability Schedule</h4>
-            {availability.length > 0 ? (
-              <table style={tableStyle}>
-                <thead>
-                  <tr style={{ background: '#f8f9fa' }}>
-                    <th style={thStyle}>Day</th>
-                    <th style={thStyle}>From Time</th>
-                    <th style={thStyle}>To Time</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {availability.map((a, i) => (
-                    a.time && a.time.length > 0 ? a.time.map((t, j) => (
-                      <tr key={`${i}-${j}`}>
-                        {j === 0 && <td style={{ ...tdStyle, fontWeight: 500 }} rowSpan={a.time.length}>{a.day || '-'}</td>}
-                        <td style={tdStyle}>{t.fromTime || '-'}</td>
-                        <td style={tdStyle}>{t.toTime || '-'}</td>
-                      </tr>
-                    )) : (
-                      <tr key={i}>
-                        <td style={{ ...tdStyle, fontWeight: 500 }}>{a.day || '-'}</td>
-                        <td style={tdStyle}>-</td>
-                        <td style={tdStyle}>-</td>
-                      </tr>
-                    )
-                  ))}
-                </tbody>
-              </table>
-            ) : <p style={emptyText}>No availability data.</p>}
-
-            {/* Other Info */}
-            <h4 style={{ marginTop: 20, marginBottom: 15 }}>Other Information</h4>
-            <InfoRow label="Why Onboard" value={data.whyOnBoard} />
-            <InfoRow label="Interview Time" value={data.interviewTime} />
-            <InfoRow label="Current City" value={data.currentCity} />
-            <InfoRow label="Main Source of Business" value={data.mainSourceOfBusiness} />
-            <InfoRow label="Highest Qualification" value={data.highestQualification} />
-            <InfoRow label="College / Institute" value={data.college} />
-            <InfoRow label="Degree" value={data.degree} />
-            <InfoRow label="Expected Earnings (Min)" value={data.expectedEarningsMin || data.minimumEarning} />
-            <InfoRow label="Expected Earnings (Max)" value={data.expectedEarningsMax || data.maximumEarning} />
-            <InfoRow label="Good Quality" value={data.goodQuality} />
-            <InfoRow label="Biggest Challenge" value={data.biggestChallenge} />
-            <InfoRow label="Foreign Countries Count" value={data.foreignCountriesCount || data.longTermForeignCountries} />
-            <InfoRow label="Currently Working" value={data.currentlyWorking != null ? (data.currentlyWorking ? 'Yes' : 'No') : '-'} />
-          </div>
-        )}
-
-        {/* 2. Wallet Tab */}
-        {activeTab === 'wallet' && (
-          <div>
-            <h4 style={{ marginTop: 0, marginBottom: 15 }}>Wallet Transactions ({wallet.length})</h4>
-            {wallet.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {wallet.map((w, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#f8f9fa', borderRadius: 8 }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500 }}>{w.astrologerName || w.name || '-'}</div>
-                      <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
-                        {w.transactionType || '-'} {w.totalMin ? `| ${w.totalMin} min` : ''}
-                      </div>
-                      <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>{formatDateTime(w.created_at)}</div>
-                    </div>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: parseFloat(w.amount) >= 0 ? '#059669' : '#dc2626' }}>
-                      {parseFloat(w.amount) >= 0 ? '+' : ''}{'\u20B9'}{w.amount}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : <p style={emptyText}>No wallet transactions.</p>}
-          </div>
-        )}
-
-        {/* 3. Chat History Tab */}
-        {activeTab === 'chat' && (
-          <div>
-            <h4 style={{ marginTop: 0, marginBottom: 15 }}>Chat History ({chatHistory.length})</h4>
-            {chatHistory.length > 0 ? (
-              <table style={tableStyle}>
-                <thead>
-                  <tr style={{ background: '#f8f9fa' }}>
-                    <th style={thStyle}>#</th>
-                    <th style={thStyle}>Customer Name</th>
-                    <th style={thStyle}>Contact</th>
-                    <th style={thStyle}>Duration (min)</th>
-                    <th style={thStyle}>Rate</th>
-                    <th style={thStyle}>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {chatHistory.map((c, i) => (
-                    <tr key={i}>
-                      <td style={tdStyle}>{i + 1}</td>
-                      <td style={{ ...tdStyle, fontWeight: 500 }}>{c.customerName || c.name || '-'}</td>
-                      <td style={tdStyle}>{c.contactNo || c.customerContactNo || '-'}</td>
-                      <td style={tdStyle}>{c.totalMin || 0}</td>
-                      <td style={tdStyle}>{'\u20B9'}{c.chatRate || c.charge || 0}/min</td>
-                      <td style={tdStyle}>{formatDateTime(c.created_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : <p style={emptyText}>No chat history.</p>}
-          </div>
-        )}
-
-        {/* 4. Call History Tab */}
-        {activeTab === 'call' && (
-          <div>
-            <h4 style={{ marginTop: 0, marginBottom: 15 }}>Call History ({callHistory.length})</h4>
-            {callHistory.length > 0 ? (
-              <table style={tableStyle}>
-                <thead>
-                  <tr style={{ background: '#f8f9fa' }}>
-                    <th style={thStyle}>#</th>
-                    <th style={thStyle}>Customer Name</th>
-                    <th style={thStyle}>Contact</th>
-                    <th style={thStyle}>Duration (min)</th>
-                    <th style={thStyle}>Rate</th>
-                    <th style={thStyle}>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {callHistory.map((c, i) => (
-                    <tr key={i}>
-                      <td style={tdStyle}>{i + 1}</td>
-                      <td style={{ ...tdStyle, fontWeight: 500 }}>{c.customerName || c.name || '-'}</td>
-                      <td style={tdStyle}>{c.contactNo || c.customerContactNo || '-'}</td>
-                      <td style={tdStyle}>{c.totalMin || 0}</td>
-                      <td style={tdStyle}>{'\u20B9'}{c.callRate || c.charge || 0}/min</td>
-                      <td style={tdStyle}>{formatDateTime(c.created_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : <p style={emptyText}>No call history.</p>}
-          </div>
-        )}
-
-        {/* 5. Report Tab */}
-        {activeTab === 'report' && (
-          <div>
-            <h4 style={{ marginTop: 0, marginBottom: 15 }}>Reports ({reportHistory.length})</h4>
-            {reportHistory.length > 0 ? (
-              <table style={tableStyle}>
-                <thead>
-                  <tr style={{ background: '#f8f9fa' }}>
-                    <th style={thStyle}>#</th>
-                    <th style={thStyle}>Customer</th>
-                    <th style={thStyle}>Contact</th>
-                    <th style={thStyle}>Report Type</th>
-                    <th style={thStyle}>Status</th>
-                    <th style={thStyle}>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reportHistory.map((r, i) => (
-                    <tr key={i}>
-                      <td style={tdStyle}>{i + 1}</td>
-                      <td style={{ ...tdStyle, fontWeight: 500 }}>{r.customerName || r.userName || '-'}</td>
-                      <td style={tdStyle}>{r.contactNo || '-'}</td>
-                      <td style={tdStyle}>{r.reportType || r.reportTitle || '-'}</td>
-                      <td style={tdStyle}>
-                        <span style={{ padding: '2px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: statusBg(r.status), color: statusColor(r.status) }}>
-                          {r.status || '-'}
-                        </span>
-                      </td>
-                      <td style={tdStyle}>{formatDateTime(r.created_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : <p style={emptyText}>No report requests.</p>}
-          </div>
-        )}
-
-        {/* 6. Puja Orders Tab */}
-        {activeTab === 'puja' && (
-          <div>
-            <h4 style={{ marginTop: 0, marginBottom: 15 }}>Puja Orders ({pujaOrders.length})</h4>
-            {pujaOrders.length > 0 ? (
-              <table style={tableStyle}>
-                <thead>
-                  <tr style={{ background: '#f8f9fa' }}>
-                    <th style={thStyle}>#</th>
-                    <th style={thStyle}>Puja Name</th>
-                    <th style={thStyle}>Amount</th>
-                    <th style={thStyle}>Status</th>
-                    <th style={thStyle}>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pujaOrders.map((p, i) => (
-                    <tr key={i}>
-                      <td style={tdStyle}>{i + 1}</td>
-                      <td style={{ ...tdStyle, fontWeight: 500 }}>{p.pujaName || '-'}</td>
-                      <td style={tdStyle}>{'\u20B9'}{p.amount || 0}</td>
-                      <td style={tdStyle}>
-                        <span style={{ padding: '2px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: statusBg(p.status), color: statusColor(p.status) }}>
-                          {p.status || '-'}
-                        </span>
-                      </td>
-                      <td style={tdStyle}>{formatDateTime(p.created_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : <p style={emptyText}>No puja orders.</p>}
-          </div>
-        )}
-
-        {/* 7. Followers List Tab */}
-        {activeTab === 'followers' && (
-          <div>
-            <h4 style={{ marginTop: 0, marginBottom: 15 }}>Followers List ({followers.length})</h4>
-            {followers.length > 0 ? (
-              <table style={tableStyle}>
-                <thead>
-                  <tr style={{ background: '#f8f9fa' }}>
-                    <th style={thStyle}>#</th>
-                    <th style={thStyle}>Profile</th>
-                    <th style={thStyle}>Name</th>
-                    <th style={thStyle}>Contact</th>
-                    <th style={thStyle}>Followed On</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {followers.map((f, i) => (
-                    <tr key={i}>
-                      <td style={tdStyle}>{i + 1}</td>
-                      <td style={tdStyle}>
-                        <img
-                          src={f.profileImage ? (f.profileImage.startsWith('http') ? f.profileImage : `/public/storage/images/${f.profileImage}`) : fallbackSvg}
-                          alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
-                          onError={e => { e.target.src = fallbackSvg; }} />
-                      </td>
-                      <td style={{ ...tdStyle, fontWeight: 500 }}>{f.userName || f.name || '-'}</td>
-                      <td style={tdStyle}>{f.contactNo || '-'}</td>
-                      <td style={tdStyle}>{formatDateTime(f.created_at || f.followingDate)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : <p style={emptyText}>No followers.</p>}
-          </div>
-        )}
-
-        {/* 8. Notification List Tab */}
-        {activeTab === 'notification' && (
-          <div>
-            <h4 style={{ marginTop: 0, marginBottom: 15 }}>Notification List ({notifications.length})</h4>
-            {notifications.length > 0 ? (
-              <table style={tableStyle}>
-                <thead>
-                  <tr style={{ background: '#f8f9fa' }}>
-                    <th style={thStyle}>#</th>
-                    <th style={thStyle}>Title</th>
-                    <th style={thStyle}>Description</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {notifications.map((n, i) => (
-                    <tr key={i}>
-                      <td style={tdStyle}>{i + 1}</td>
-                      <td style={{ ...tdStyle, fontWeight: 500 }}>{n.title || '-'}</td>
-                      <td style={tdStyle}>{n.description || '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : <p style={emptyText}>No notifications.</p>}
-          </div>
-        )}
-
-        {/* 9. Gift List Tab */}
-        {activeTab === 'gift' && (
-          <div>
-            <h4 style={{ marginTop: 0, marginBottom: 15 }}>Gift List ({gifts.length})</h4>
-            {gifts.length > 0 ? (
-              <table style={tableStyle}>
-                <thead>
-                  <tr style={{ background: '#f8f9fa' }}>
-                    <th style={thStyle}>#</th>
-                    <th style={thStyle}>Gift Name</th>
-                    <th style={thStyle}>Amount</th>
-                    <th style={thStyle}>From User</th>
-                    <th style={thStyle}>Contact</th>
-                    <th style={thStyle}>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {gifts.map((g, i) => (
-                    <tr key={i}>
-                      <td style={tdStyle}>{i + 1}</td>
-                      <td style={tdStyle}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {g.giftImage && (
-                            <img src={g.giftImage.startsWith('http') ? g.giftImage : `/public/storage/images/${g.giftImage}`}
-                              alt={g.giftName} style={{ width: 28, height: 28, borderRadius: 4, objectFit: 'cover' }}
-                              onError={e => { e.target.style.display = 'none'; }} />
-                          )}
-                          <span style={{ fontWeight: 500 }}>{g.giftName || '-'}</span>
-                        </div>
-                      </td>
-                      <td style={tdStyle}>{'\u20B9'}{g.giftAmount || g.amount || 0}</td>
-                      <td style={{ ...tdStyle, fontWeight: 500 }}>{g.userName || g.customerName || '-'}</td>
-                      <td style={tdStyle}>{g.contactNo || '-'}</td>
-                      <td style={tdStyle}>{formatDateTime(g.created_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : <p style={emptyText}>No gifts received.</p>}
-          </div>
-        )}
-
-        {/* 10. Bank Details Tab */}
-        {activeTab === 'reviews' && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h4 style={{ margin: 0 }}>Customer Reviews ({review.length})</h4>
-              {review.length > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f9f5ff', padding: '8px 16px', borderRadius: 10, border: '1px solid #e0d4f5' }}>
-                  <span style={{ fontSize: 22, color: '#f59e0b' }}>&#9733;</span>
-                  <span style={{ fontSize: 20, fontWeight: 700, color: '#1a0533' }}>{(review.reduce((sum, r) => sum + (parseFloat(r.rating) || 0), 0) / review.length).toFixed(1)}</span>
-                  <span style={{ fontSize: 13, color: '#6b7280' }}>/ 5 ({review.length} reviews)</span>
+    <div className="cd-page ad-page">
+      {/* Hero */}
+      <div className="cd-hero-wrap">
+        <div className="cd-hero">
+          <div className="cd-hero-left">
+            <div className="cd-hero-avatar-wrap">
+              {profileImg ? (
+                <img src={profileImg} alt={data.name} className="cd-hero-avatar"
+                  onError={e => { e.target.src = fallbackSvg; }} />
+              ) : (
+                <div className="cd-hero-avatar cd-hero-initial">
+                  {data.name ? data.name.charAt(0).toUpperCase() : '?'}
                 </div>
               )}
             </div>
-            {review.length === 0 ? (
-              <p style={{ textAlign: 'center', color: '#9ca3af', padding: 30 }}>No reviews yet</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="cd-hero-info">
+              <h2 className="cd-hero-name">{data.name || 'Unknown'}</h2>
+              <p className="cd-hero-phone">{data.contactNo}</p>
+              {data.email && <p className="cd-hero-email">{data.email}</p>}
+            </div>
+          </div>
+        </div>
+        <div className="cd-hero-stats">
+          {stats.map((s, i) => (
+            <div key={i} className="cd-stat-chip" style={{ background: s.bg, color: s.color }}>
+              <span className="cd-stat-val">{s.value}</span>
+              <span className="cd-stat-lbl">{s.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Info Accordions */}
+      <div className="cd-accordion-grid">
+        <div className="cd-accordion">
+          <button className={`cd-accordion-header ${openAccordion === 'contact' ? 'open' : ''}`} onClick={() => setOpenAccordion(openAccordion === 'contact' ? null : 'contact')}>
+            <span><Contact size={16} /> Contact & Identity</span>
+            <ChevronDown size={16} className="cd-accordion-arrow" />
+          </button>
+          <div className={`cd-accordion-body ${openAccordion === 'contact' ? 'open' : ''}`}>
+            <div className="cd-accordion-inner">
+              <InfoRow label="Email" value={data.email} />
+              <InfoRow label="WhatsApp" value={data.whatsappNo || data.whatsAppNo} />
+              <InfoRow label="Aadhar No" value={data.aadharNo || data.aadharNumber} />
+              <InfoRow label="Pan No" value={data.panNo || data.panNumber} />
+              <InfoRow label="Current City" value={data.currentCity} />
+            </div>
+          </div>
+        </div>
+        <div className="cd-accordion">
+          <button className={`cd-accordion-header ${openAccordion === 'charges' ? 'open' : ''}`} onClick={() => setOpenAccordion(openAccordion === 'charges' ? null : 'charges')}>
+            <span><IndianRupee size={16} /> Charges & Rates</span>
+            <ChevronDown size={16} className="cd-accordion-arrow" />
+          </button>
+          <div className={`cd-accordion-body ${openAccordion === 'charges' ? 'open' : ''}`}>
+            <div className="cd-accordion-inner">
+              <InfoRow label="Call Rate" value={data.charge ? `₹${data.charge}/min` : '-'} />
+              <InfoRow label="Video Call Rate" value={data.videoCallRate ? `₹${data.videoCallRate}/min` : '-'} />
+              <InfoRow label="Report Rate" value={data.reportRate ? `₹${data.reportRate}` : '-'} />
+              <InfoRow label="Experience" value={data.experienceInYears ? `${data.experienceInYears} years` : '-'} />
+              <InfoRow label="Daily Hours" value={data.dailyContribution} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="cd-tabs-wrap">
+        <div className="cd-tabs">
+          {tabs.map(tab => {
+            const Icon = tab.icon;
+            return (
+              <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                className={`cd-tab ${activeTab === tab.key ? 'active' : ''}`}>
+                <Icon size={15} />
+                <span className="cd-tab-label">{tab.label}</span>
+                {tab.count > 0 && <span className="cd-tab-count">{tab.count}</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      <div className="cd-content">
+
+        {/* Basic Detail */}
+        {activeTab === 'basic' && (
+          <div>
+            <div className="ad-section">
+              <h4 className="ad-section-title">Personal Information</h4>
+              <InfoRow label="Gender" value={data.gender} />
+              <InfoRow label="Date of Birth" value={formatDate(data.birthDate || data.dateOfBirth)} />
+              <InfoRow label="Category" value={renderList(data.astrologerCategoryId)} />
+              <InfoRow label="Primary Skill" value={renderList(data.primarySkill)} />
+              <InfoRow label="All Skills" value={renderList(data.allSkill)} />
+              <InfoRow label="Languages" value={renderList(data.languageKnown)} />
+            </div>
+
+            <div className="ad-section">
+              <h4 className="ad-section-title">Professional</h4>
+              <InfoRow label="App Reference" value={data.appReference || data.hearAboutAstroguru} />
+              <InfoRow label="Why Onboard" value={data.whyOnBoard} />
+              <InfoRow label="Highest Qualification" value={data.highestQualification} />
+              <InfoRow label="College" value={data.college} />
+              <InfoRow label="Degree" value={data.degree} />
+              <InfoRow label="Good Quality" value={data.goodQuality} />
+            </div>
+
+            <div className="ad-section">
+              <h4 className="ad-section-title">Login Bio</h4>
+              <p className="ad-bio">{data.loginBio || '-'}</p>
+            </div>
+
+            {/* Total Order Edit */}
+            <div className="ad-section">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h4 className="ad-section-title" style={{ margin: 0 }}>Total Order: {data.totalOrder || 0}</h4>
+                <button onClick={() => { setTotalOrderValue(data.totalOrder || 0); setShowOrderModal(true); }} className="ad-edit-btn">
+                  <Pencil size={13} /> Edit
+                </button>
+              </div>
+            </div>
+
+            {/* Availability */}
+            {availability.length > 0 && (
+              <div className="ad-section">
+                <h4 className="ad-section-title">Availability Schedule</h4>
+                <div className="cd-table-wrap">
+                  <table className="cd-table">
+                    <thead><tr><th>Day</th><th>From</th><th>To</th></tr></thead>
+                    <tbody>
+                      {availability.map((a, i) =>
+                        a.time && a.time.length > 0 ? a.time.map((t, j) => (
+                          <tr key={`${i}-${j}`}>
+                            {j === 0 && <td rowSpan={a.time.length} className="cd-tbl-name">{a.day || '-'}</td>}
+                            <td>{t.fromTime || '-'}</td>
+                            <td>{t.toTime || '-'}</td>
+                          </tr>
+                        )) : (
+                          <tr key={i}><td className="cd-tbl-name">{a.day || '-'}</td><td>-</td><td>-</td></tr>
+                        )
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Wallet */}
+        {activeTab === 'wallet' && (
+          wallet.length > 0 ? (
+            <div className="cd-txn-list">
+              {wallet.map((w, i) => (
+                <div key={i} className="cd-txn">
+                  <div className="cd-txn-info">
+                    <span className="cd-txn-desc">{w.astrologerName || w.name || w.transactionType || '-'}</span>
+                    <span className="cd-txn-date">{w.transactionType || '-'} {w.totalMin ? `| ${w.totalMin} min` : ''} &middot; {formatDateTime(w.created_at)}</span>
+                  </div>
+                  <span className={`cd-txn-amount ${parseFloat(w.amount) >= 0 ? 'green' : 'red'}`}>
+                    {parseFloat(w.amount) >= 0 ? '+' : ''}₹{formatNumber(parseFloat(w.amount || 0))}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : <p className="cd-empty">No wallet transactions.</p>
+        )}
+
+        {/* Chat History */}
+        {activeTab === 'chat' && (
+          chatHistory.length > 0 ? (
+            <div className="cd-table-wrap">
+              <table className="cd-table">
+                <thead><tr><th>#</th><th>Customer</th><th>Contact</th><th>Duration</th><th>Rate</th><th>Date</th></tr></thead>
+                <tbody>
+                  {chatHistory.map((c, i) => (
+                    <tr key={i}>
+                      <td>{i + 1}</td>
+                      <td className="cd-tbl-name">{c.customerName || c.name || '-'}</td>
+                      <td>{c.contactNo || c.customerContactNo || '-'}</td>
+                      <td>{c.totalMin || 0} min</td>
+                      <td>₹{c.chatRate || c.charge || 0}/min</td>
+                      <td>{formatDateTime(c.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="cd-empty">No chat history.</p>
+        )}
+
+        {/* Call History */}
+        {activeTab === 'call' && (
+          callHistory.length > 0 ? (
+            <div className="cd-table-wrap">
+              <table className="cd-table">
+                <thead><tr><th>#</th><th>Customer</th><th>Contact</th><th>Duration</th><th>Rate</th><th>Date</th></tr></thead>
+                <tbody>
+                  {callHistory.map((c, i) => (
+                    <tr key={i}>
+                      <td>{i + 1}</td>
+                      <td className="cd-tbl-name">{c.customerName || c.name || '-'}</td>
+                      <td>{c.contactNo || c.customerContactNo || '-'}</td>
+                      <td>{c.totalMin || 0} min</td>
+                      <td>₹{c.callRate || c.charge || 0}/min</td>
+                      <td>{formatDateTime(c.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="cd-empty">No call history.</p>
+        )}
+
+        {/* Report */}
+        {activeTab === 'report' && (
+          reportHistory.length > 0 ? (
+            <div className="cd-table-wrap">
+              <table className="cd-table">
+                <thead><tr><th>#</th><th>Customer</th><th>Contact</th><th>Type</th><th>Status</th><th>Date</th></tr></thead>
+                <tbody>
+                  {reportHistory.map((r, i) => (
+                    <tr key={i}>
+                      <td>{i + 1}</td>
+                      <td className="cd-tbl-name">{r.customerName || r.userName || '-'}</td>
+                      <td>{r.contactNo || '-'}</td>
+                      <td>{r.reportType || r.reportTitle || '-'}</td>
+                      <td><span className={`cd-badge ${statusClass(r.status)}`}>{r.status || '-'}</span></td>
+                      <td>{formatDateTime(r.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="cd-empty">No reports.</p>
+        )}
+
+        {/* Puja Orders */}
+        {activeTab === 'puja' && (
+          pujaOrders.length > 0 ? (
+            <div className="cd-table-wrap">
+              <table className="cd-table">
+                <thead><tr><th>#</th><th>Puja</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+                <tbody>
+                  {pujaOrders.map((p, i) => (
+                    <tr key={i}>
+                      <td>{i + 1}</td>
+                      <td className="cd-tbl-name">{p.pujaName || '-'}</td>
+                      <td>₹{formatNumber(p.amount || 0)}</td>
+                      <td><span className={`cd-badge ${statusClass(p.status)}`}>{p.status || '-'}</span></td>
+                      <td>{formatDateTime(p.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="cd-empty">No puja orders.</p>
+        )}
+
+        {/* Followers */}
+        {activeTab === 'followers' && (
+          followers.length > 0 ? (
+            <div className="cd-table-wrap">
+              <table className="cd-table">
+                <thead><tr><th>#</th><th>Profile</th><th>Name</th><th>Contact</th><th>Date</th></tr></thead>
+                <tbody>
+                  {followers.map((f, i) => (
+                    <tr key={i}>
+                      <td>{i + 1}</td>
+                      <td><img src={imgSrc(f.profileImage)} alt="" className="cd-tbl-avatar" onError={e => { e.target.src = fallbackSvg; }} /></td>
+                      <td className="cd-tbl-name">{f.userName || f.name || '-'}</td>
+                      <td>{f.contactNo || '-'}</td>
+                      <td>{formatDateTime(f.created_at || f.followingDate)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="cd-empty">No followers.</p>
+        )}
+
+        {/* Notifications */}
+        {activeTab === 'notification' && (
+          notifications.length > 0 ? (
+            <div className="cd-table-wrap">
+              <table className="cd-table"><thead><tr><th>#</th><th>Title</th><th>Description</th></tr></thead>
+                <tbody>
+                  {notifications.map((n, i) => (
+                    <tr key={i}><td>{i + 1}</td><td className="cd-tbl-name">{n.title || '-'}</td><td>{n.description || '-'}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="cd-empty">No notifications.</p>
+        )}
+
+        {/* Gifts */}
+        {activeTab === 'gift' && (
+          gifts.length > 0 ? (
+            <div className="cd-table-wrap">
+              <table className="cd-table">
+                <thead><tr><th>#</th><th>Gift</th><th>Amount</th><th>From</th><th>Contact</th><th>Date</th></tr></thead>
+                <tbody>
+                  {gifts.map((g, i) => (
+                    <tr key={i}>
+                      <td>{i + 1}</td>
+                      <td className="cd-tbl-name">{g.giftName || '-'}</td>
+                      <td style={{ color: '#059669', fontWeight: 700 }}>₹{formatNumber(g.giftAmount || g.amount || 0)}</td>
+                      <td>{g.userName || g.customerName || '-'}</td>
+                      <td>{g.contactNo || '-'}</td>
+                      <td>{formatDateTime(g.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="cd-empty">No gifts received.</p>
+        )}
+
+        {/* Reviews */}
+        {activeTab === 'reviews' && (
+          <div>
+            {review.length > 0 && (
+              <div className="ad-review-summary">
+                <span className="ad-review-star">★</span>
+                <span className="ad-review-avg">{(review.reduce((sum, r) => sum + (parseFloat(r.rating) || 0), 0) / review.length).toFixed(1)}</span>
+                <span className="ad-review-count">/ 5 ({review.length} reviews)</span>
+              </div>
+            )}
+            {review.length === 0 ? <p className="cd-empty">No reviews yet.</p> : (
+              <div className="ad-review-list">
                 {review.map((r, i) => (
-                  <div key={r.id || i} style={{ background: '#fff', border: '1px solid #f0e6ff', borderRadius: 12, padding: '16px 20px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-                    <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#7c3aed', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
-                      {(r.user_name || r.userName || 'U')[0].toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                        <span style={{ fontWeight: 600, color: '#1a0533', fontSize: 14 }}>{r.user_name || r.userName || 'Customer'}</span>
-                        <span style={{ fontSize: 12, color: '#9ca3af' }}>{r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}</span>
+                  <div key={r.id || i} className="ad-review-card">
+                    <div className="ad-review-avatar">{(r.user_name || r.userName || 'U')[0].toUpperCase()}</div>
+                    <div className="ad-review-body">
+                      <div className="ad-review-top">
+                        <span className="ad-review-name">{r.user_name || r.userName || 'Customer'}</span>
+                        <span className="cd-item-time">{r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}</span>
                       </div>
-                      <div style={{ marginBottom: 6 }}>
+                      <div className="ad-review-stars">
                         {[1,2,3,4,5].map(n => (
-                          <span key={n} style={{ color: n <= (parseFloat(r.rating) || 0) ? '#f59e0b' : '#d1d5db', fontSize: 16 }}>&#9733;</span>
+                          <span key={n} style={{ color: n <= (parseFloat(r.rating) || 0) ? '#f59e0b' : '#d1d5db' }}>★</span>
                         ))}
-                        <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 6 }}>{parseFloat(r.rating || 0).toFixed(1)}</span>
+                        <span className="ad-review-rating">{parseFloat(r.rating || 0).toFixed(1)}</span>
                       </div>
-                      <p style={{ margin: 0, fontSize: 13, color: '#374151', lineHeight: 1.5 }}>{r.review || '-'}</p>
+                      <p className="ad-review-text">{r.review || '-'}</p>
                       {r.reply && (
-                        <div style={{ marginTop: 8, background: '#f0fdf4', borderRadius: 8, padding: '8px 12px', borderLeft: '3px solid #10b981' }}>
-                          <span style={{ fontSize: 11, fontWeight: 600, color: '#059669' }}>Astrologer Reply:</span>
-                          <p style={{ margin: '4px 0 0', fontSize: 13, color: '#374151' }}>{r.reply}</p>
+                        <div className="ad-review-reply">
+                          <strong>Astrologer Reply:</strong>
+                          <p>{r.reply}</p>
                         </div>
                       )}
                     </div>
@@ -595,81 +489,73 @@ const AstrologerDetail = () => {
           </div>
         )}
 
+        {/* Commission */}
         {activeTab === 'commission' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h4 style={{ margin: 0 }}>Custom Commission (leave empty for default)</h4>
+            <div className="ad-comm-header">
+              <div>
+                <h4 className="ad-section-title" style={{ margin: 0 }}>Custom Commission</h4>
+                <p className="ad-comm-note">Empty = Global default. Set custom value to override.</p>
+              </div>
               <button onClick={async () => {
                 setCommSaving(true);
-                try {
-                  await astrologerApi.updateCommission({ astrologerId: id, ...commForm });
-                  alert('Commission updated!');
-                } catch(e) { alert('Failed to update'); }
+                try { await astrologerApi.updateCommission({ astrologerId: id, ...commForm }); alert('Commission updated!'); }
+                catch(e) { alert('Failed to update'); }
                 setCommSaving(false);
-              }} disabled={commSaving} style={{ background: '#7c3aed', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, fontWeight: 600, cursor: 'pointer', opacity: commSaving ? 0.6 : 1 }}>
-                {commSaving ? 'Saving...' : 'Save Commission'}
+              }} disabled={commSaving} className="ad-save-btn">
+                {commSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
-            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>Empty = Global default from System Settings. Set custom value to override for this astrologer only.</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="ad-comm-grid">
               {[
-                { key: 'chatCommission', label: 'Chat Commission (%)' },
-                { key: 'callCommission', label: 'Call Commission (%)' },
-                { key: 'videoCallCommission', label: 'Video Call Commission (%)' },
-                { key: 'reportCommission', label: 'Report Commission (%)' },
-                { key: 'giftCommission', label: 'Gift Commission (%)' },
-                { key: 'pujaCommission', label: 'Puja Commission (%)' },
+                { key: 'chatCommission', label: 'Chat (%)' },
+                { key: 'callCommission', label: 'Call (%)' },
+                { key: 'videoCallCommission', label: 'Video Call (%)' },
+                { key: 'reportCommission', label: 'Report (%)' },
+                { key: 'giftCommission', label: 'Gift (%)' },
+                { key: 'pujaCommission', label: 'Puja (%)' },
               ].map(f => (
-                <div key={f.key}>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 6 }}>{f.label}</label>
-                  <input type="number" min="0" max="100" value={commForm[f.key]} onChange={e => setCommForm(prev => ({ ...prev, [f.key]: e.target.value }))}
-                    placeholder="Default" style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }} />
+                <div key={f.key} className="ad-comm-field">
+                  <label>{f.label}</label>
+                  <input type="number" min="0" max="100" value={commForm[f.key]} onChange={e => setCommForm(prev => ({ ...prev, [f.key]: e.target.value }))} placeholder="Default" />
                 </div>
               ))}
             </div>
           </div>
         )}
 
+        {/* Bank Details */}
         {activeTab === 'bank' && (
           <div>
-            <h4 style={{ marginTop: 0, marginBottom: 15 }}>Bank Details</h4>
+            <h4 className="ad-section-title">Bank Details</h4>
             <InfoRow label="Account Holder" value={bankDetails.accountHolder || bankDetails.accountHolderName} />
             <InfoRow label="Account Number" value={bankDetails.accountNumber} />
             <InfoRow label="IFSC Code" value={bankDetails.ifscCode || bankDetails.ifsc} />
             <InfoRow label="Bank Name" value={bankDetails.bankName} />
-            <InfoRow label="Branch Name" value={bankDetails.branchName || bankDetails.branch} />
+            <InfoRow label="Branch" value={bankDetails.branchName || bankDetails.branch} />
           </div>
         )}
       </div>
 
       {/* Edit Total Order Modal */}
       {showOrderModal && (
-        <div style={modalOverlay}>
-          <div style={modalBox}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0 }}>Edit Total Order</h3>
-              <button onClick={() => setShowOrderModal(false)}
-                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#666' }}>&times;</button>
+        <div className="cust-overlay" onClick={() => setShowOrderModal(false)}>
+          <div className="cust-modal cust-modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Edit Total Order</h3>
+              <button onClick={() => setShowOrderModal(false)} className="cust-modal-close"><X size={20} /></button>
             </div>
-            <div style={{ marginBottom: 15 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 6 }}>Total Order</label>
-              <input
-                type="number"
-                value={totalOrderValue}
-                onChange={e => setTotalOrderValue(e.target.value)}
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
-                placeholder="Enter total order count"
-              />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button onClick={() => setShowOrderModal(false)}
-                style={{ padding: '8px 20px', border: '1px solid #d1d5db', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 13 }}>
-                Cancel
-              </button>
-              <button onClick={handleSaveTotalOrder} disabled={saving}
-                style={{ padding: '8px 20px', border: 'none', borderRadius: 6, background: '#7c3aed', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500, opacity: saving ? 0.6 : 1 }}>
-                {saving ? 'Saving...' : 'Save'}
-              </button>
+            <div className="cust-modal-body">
+              <div className="cust-form-group">
+                <label>Total Order</label>
+                <input type="number" value={totalOrderValue} onChange={e => setTotalOrderValue(e.target.value)} placeholder="Enter total order" />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button onClick={() => setShowOrderModal(false)} className="cust-btn cust-btn-ghost">Cancel</button>
+                <button onClick={handleSaveTotalOrder} disabled={saving} className="cust-btn cust-btn-primary">
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -678,47 +564,10 @@ const AstrologerDetail = () => {
   );
 };
 
-// Shared styles
-const sectionStyle = { background: '#fff', borderRadius: 10, padding: 20, boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: 20 };
-const statCardStyle = { background: '#fff', borderRadius: 10, padding: 20, boxShadow: '0 2px 10px rgba(0,0,0,0.05)', textAlign: 'center' };
-const tableStyle = { width: '100%', borderCollapse: 'collapse' };
-const thStyle = { padding: '10px 15px', textAlign: 'left', fontSize: 12, fontWeight: 600, borderBottom: '2px solid #e5e7eb' };
-const tdStyle = { padding: '10px 15px', borderBottom: '1px solid #f0f0f0', fontSize: 13 };
-const backBtn = { background: '#f3f4f6', border: 'none', padding: '8px 16px', borderRadius: 6, cursor: 'pointer', fontSize: 13 };
-const emptyText = { color: '#999', textAlign: 'center', padding: 30 };
-const fallbackSvg = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23e5e7eb" rx="50"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="36" fill="%23999">?</text></svg>';
-
-const modalOverlay = {
-  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-  background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-};
-const modalBox = {
-  background: '#fff', borderRadius: 10, padding: 25, width: 400, maxWidth: '90%',
-  boxShadow: '0 10px 40px rgba(0,0,0,0.15)'
-};
-
-const statusColor = (status) => {
-  if (!status) return '#666';
-  const s = status.toLowerCase();
-  if (['completed', 'success', 'accepted', 'approved', 'active'].includes(s)) return '#065f46';
-  if (['cancelled', 'failed', 'rejected'].includes(s)) return '#991b1b';
-  if (['pending', 'waiting', 'processing'].includes(s)) return '#92400e';
-  return '#666';
-};
-
-const statusBg = (status) => {
-  if (!status) return '#f3f4f6';
-  const s = status.toLowerCase();
-  if (['completed', 'success', 'accepted', 'approved', 'active'].includes(s)) return '#d1fae5';
-  if (['cancelled', 'failed', 'rejected'].includes(s)) return '#fee2e2';
-  if (['pending', 'waiting', 'processing'].includes(s)) return '#fef3c7';
-  return '#f3f4f6';
-};
-
 const InfoRow = ({ label, value }) => (
-  <div style={{ display: 'flex', padding: '6px 0', borderBottom: '1px solid #f5f5f5' }}>
-    <span style={{ width: 200, fontWeight: 600, color: '#555', fontSize: 12 }}>{label}</span>
-    <span style={{ flex: 1, color: '#333', fontSize: 13 }}>{value || '-'}</span>
+  <div className="cd-irow">
+    <span className="cd-irow-label">{label}</span>
+    <span className="cd-irow-value">{value || '-'}</span>
   </div>
 );
 

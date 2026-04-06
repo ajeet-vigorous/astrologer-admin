@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { orderApi } from '../api/services';
+import Loader from '../components/Loader';
+import { ShoppingBag, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import '../styles/Customers.css';
+
+import getImgSrc from '../utils/getImageUrl';
 
 const ProductRecommend = () => {
   const [data, setData] = useState([]);
@@ -49,7 +54,7 @@ const ProductRecommend = () => {
   const getImageSrc = (img) => {
     if (!img) return null;
     if (img.startsWith('http')) return img;
-    return '/' + img;
+    if (img.startsWith('public/')) return '/' + img; return '/public/' + img;
   };
 
   const openImageViewer = (img) => {
@@ -57,142 +62,118 @@ const ProductRecommend = () => {
     setShowImageModal(true);
   };
 
-  const totalPages = pagination?.totalPages || 0;
+  const renderPagination = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+    const pages = [];
+    for (let i = 1; i <= Math.min(pagination.totalPages, 15); i++) pages.push(i);
+    return (
+      <div className="cust-pagination">
+        <span className="cust-page-info">
+          Showing {pagination.start} to {pagination.end} of {pagination.totalRecords} entries
+        </span>
+        <div className="cust-page-btns">
+          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="cust-page-btn">
+            <ChevronLeft size={14} />
+          </button>
+          {pages.map(p => (
+            <button key={p} onClick={() => setPage(p)} className={`cust-page-btn ${p === page ? 'active' : ''}`}>
+              {p}
+            </button>
+          ))}
+          {pagination.totalPages > 15 && <span className="cust-page-dots">...</span>}
+          <button onClick={() => setPage(Math.min(pagination.totalPages, page + 1))} disabled={page >= pagination.totalPages} className="cust-page-btn">
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div style={styles.container}>
-      {/* Header */}
-      <div style={styles.headerRow}>
-        <h2 style={styles.title}>Product Recommends</h2>
-      </div>
-
-      {/* Table */}
-      <div style={styles.tableWrapper}>
-        <div style={styles.tableScroll}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>#</th>
-                <th style={styles.th}>Product</th>
-                <th style={styles.th}>User</th>
-                <th style={styles.th}>Astrologer</th>
-                <th style={styles.th}>Purchased By User</th>
-                <th style={styles.th}>Recommend Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={6} style={styles.noData}>Loading...</td></tr>
-              ) : data.length === 0 ? (
-                <tr><td colSpan={6} style={styles.noData}>No Data Available</td></tr>
-              ) : (
-                data.map((item, i) => {
-                  const imgSrc = getImageSrc(item.productImage || item.product?.productImage);
-                  return (
-                    <tr key={item.id || i} style={styles.tr}>
-                      <td style={styles.td}>{(pagination?.start || 0) + i}</td>
-                      <td style={styles.td}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {imgSrc ? (
-                            <img
-                              src={imgSrc}
-                              alt=""
-                              style={styles.productThumb}
-                              onClick={() => openImageViewer(imgSrc)}
-                              onError={(e) => { e.target.style.display = 'none'; }}
-                            />
-                          ) : null}
-                          <span>{item.productName || item.product?.name || '-'}</span>
-                        </div>
-                      </td>
-                      <td style={styles.td}>{item.userName || item.user?.name || '-'}</td>
-                      <td style={styles.td}>{item.astrologerName || item.astrologer?.name || '-'}</td>
-                      <td style={styles.td}>
-                        <span style={{
-                          padding: '4px 12px',
-                          borderRadius: 20,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          color: '#fff',
-                          background: item.isPurchased ? '#10b981' : '#ef4444'
-                        }}>
-                          {item.isPurchased ? 'Purchased' : 'Not Purchased'}
-                        </span>
-                      </td>
-                      <td style={styles.td}>{formatDate(item.recommendDate || item.created_at || item.createdAt)}</td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Pagination */}
-      {pagination && pagination.totalRecords > 0 && (
-        <div style={styles.pagination}>
-          <span style={styles.pageInfo}>
-            Showing {pagination.start} to {pagination.end} of {pagination.totalRecords} entries
-          </span>
-          <div style={styles.pageButtons}>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i + 1}
-                onClick={() => setPage(i + 1)}
-                style={{
-                  ...styles.pageBtn,
-                  background: pagination.page === i + 1 ? '#7c3aed' : '#fff',
-                  color: pagination.page === i + 1 ? '#fff' : '#374151',
-                  border: pagination.page === i + 1 ? '1px solid #7c3aed' : '1px solid #d1d5db'
-                }}
-              >
-                {i + 1}
-              </button>
-            ))}
+    <div>
+      {/* Top Bar */}
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <ShoppingBag size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Product Recommends</h2>
+            {pagination && <div className="cust-count">{pagination.totalRecords} total</div>}
           </div>
         </div>
-      )}
+      </div>
+
+      <div className="cust-card">
+        {/* Table */}
+        {loading ? <Loader text="Loading recommendations..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Product</th>
+                  <th>User</th>
+                  <th>Astrologer</th>
+                  <th>Purchased By User</th>
+                  <th>Recommend Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length === 0 ? (
+                  <tr><td colSpan={6} className="cust-no-data">No Data Available</td></tr>
+                ) : (
+                  data.map((item, i) => {
+                    const imgSrc = getImageSrc(item.productImage || item.product?.productImage);
+                    return (
+                      <tr key={item.id || i}>
+                        <td>{(pagination?.start || 0) + i}</td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {imgSrc ? (
+                              <img
+                                src={imgSrc}
+                                alt=""
+                                className="cust-avatar"
+                                style={{ borderRadius: 6, cursor: 'pointer' }}
+                                onClick={() => openImageViewer(imgSrc)}
+                                onError={(e) => { e.target.style.display = 'none'; }}
+                              />
+                            ) : null}
+                            <span className="cust-name-cell">{item.productName || item.product?.name || '-'}</span>
+                          </div>
+                        </td>
+                        <td>{item.userName || item.user?.name || '-'}</td>
+                        <td>{item.astrologerName || item.astrologer?.name || '-'}</td>
+                        <td>
+                          <span className={`cust-verify-badge ${item.isPurchased ? 'verified' : 'unverified'}`}>
+                            {item.isPurchased ? 'Purchased' : 'Not Purchased'}
+                          </span>
+                        </td>
+                        <td className="cust-date-cell">{formatDate(item.recommendDate || item.created_at || item.createdAt)}</td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {renderPagination()}
+      </div>
 
       {/* Image Viewer Modal */}
       {showImageModal && viewImage && (
-        <div style={styles.modalOverlay} onClick={() => setShowImageModal(false)}>
-          <div style={styles.imageModalContent} onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setShowImageModal(false)} style={styles.imageModalClose}>&times;</button>
-            <img src={viewImage} alt="" style={styles.imageModalImg} />
+        <div className="cust-overlay" onClick={() => setShowImageModal(false)}>
+          <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative', maxWidth: '90%', maxHeight: '90vh' }}>
+            <button onClick={() => setShowImageModal(false)} style={{ position: 'absolute', top: -15, right: -15, background: '#fff', border: 'none', borderRadius: '50%', width: 34, height: 34, fontSize: 20, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#374151', zIndex: 10 }}>
+              <X size={18} />
+            </button>
+            <img src={viewImage} alt="" style={{ maxWidth: '100%', maxHeight: '85vh', borderRadius: 8, objectFit: 'contain' }} />
           </div>
         </div>
       )}
     </div>
   );
-};
-
-const styles = {
-  container: { padding: 0 },
-  headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  title: { margin: 0, fontSize: 22, fontWeight: 600, color: '#1f2937' },
-
-  // Table
-  tableWrapper: { background: '#fff', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' },
-  tableScroll: { overflowX: 'auto' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: 14 },
-  th: { padding: '12px 14px', textAlign: 'left', background: '#f8f9fa', borderBottom: '2px solid #e5e7eb', fontWeight: 600, color: '#374151', whiteSpace: 'nowrap', fontSize: 13 },
-  tr: { borderBottom: '1px solid #f3f4f6' },
-  td: { padding: '12px 14px', verticalAlign: 'middle', color: '#374151' },
-  noData: { textAlign: 'center', padding: 40, color: '#9ca3af' },
-  productThumb: { width: 40, height: 40, borderRadius: 6, objectFit: 'cover', cursor: 'pointer', border: '1px solid #e5e7eb' },
-
-  // Pagination
-  pagination: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, flexWrap: 'wrap', gap: 10 },
-  pageInfo: { fontSize: 14, color: '#6b7280' },
-  pageButtons: { display: 'flex', gap: 6 },
-  pageBtn: { padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 14, fontWeight: 500 },
-
-  // Image Modal
-  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  imageModalContent: { position: 'relative', maxWidth: '90%', maxHeight: '90vh' },
-  imageModalClose: { position: 'absolute', top: -15, right: -15, background: '#fff', border: 'none', borderRadius: '50%', width: 34, height: 34, fontSize: 20, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#374151', zIndex: 10 },
-  imageModalImg: { maxWidth: '100%', maxHeight: '85vh', borderRadius: 8, objectFit: 'contain' }
 };
 
 export default ProductRecommend;

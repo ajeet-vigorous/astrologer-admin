@@ -13,8 +13,21 @@ import {
   Filler
 } from 'chart.js';
 import { Line, Bar } from 'react-chartjs-2';
+import {
+  LayoutDashboard, Phone, MessageSquare, Bot, FileText, IndianRupee, Users,
+  Sparkles, ShoppingBag, BookOpen, PhoneCall, Heart, GraduationCap,
+  ShieldCheck, ShieldX, Eye, Calendar, X
+} from 'lucide-react';
+import Swal from 'sweetalert2';
+import { astrologerApi } from '../api/services';
+import Loader from '../components/Loader';
+import formatNumber from '../utils/formatNumber';
+import '../styles/Dashboard.css';
+import '../styles/Customers.css';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
+
+const STAT_ICONS = [Phone, MessageSquare, Bot, FileText, IndianRupee, Users, Sparkles, ShoppingBag, BookOpen, PhoneCall, Heart, GraduationCap];
 
 const Dashboard = () => {
   const [data, setData] = useState(null);
@@ -22,6 +35,10 @@ const Dashboard = () => {
   const [report, setReport] = useState(null);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [scheduleModal, setScheduleModal] = useState(null);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const fetchReport = (fd, td) => {
     const params = {};
@@ -50,35 +67,65 @@ const Dashboard = () => {
       .catch(() => setLoading(false));
   }, []);
 
-  if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Loading dashboard...</div>;
-  if (!data) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>Failed to load dashboard data.</div>;
+  if (loading) return <div className="db-loader-wrap"><Loader text="Loading dashboard..." /></div>;
+  if (!data) return <div className="db-error-wrap">Failed to load dashboard data.</div>;
 
   const professionTitle = data.professionTitle || 'Astrologer';
 
-  // All 12 stat cards - EXACT match of Laravel blade.php
   const stats = [
-    { title: 'Call Request', value: data.totalCallRequest || 0, color: '#7c3aed', icon: 'phone' },
-    { title: 'Chat Request', value: data.totalChatRequest || 0, color: '#2563eb', icon: 'chat' },
-    { title: 'AI Chat Request', value: data.totalaiChatRequest || 0, color: '#8b5cf6', icon: 'smart_toy' },
-    { title: 'Report Request', value: data.totalReportRequest || 0, color: '#059669', icon: 'description' },
-    { title: 'Total Earning', value: '\u20B9' + (data.totalEarning || 0), color: '#d97706', icon: 'payments' },
-    { title: 'Total Customer', value: data.totalCustomer || 0, color: '#dc2626', icon: 'people' },
-    { title: `Total ${professionTitle}`, value: data.totalAstrologer || 0, color: '#0891b2', icon: 'stars' },
-    { title: 'Total Orders', value: data.totalOrders || 0, color: '#7c3aed', icon: 'shopping_cart' },
-    { title: 'Total Stories', value: data.totalStories || 0, color: '#ec4899', icon: 'auto_stories' },
-    { title: 'Total Exotel Calls', value: data.totalExotelReport || 0, color: '#f59e0b', icon: 'call' },
-    { title: 'Total Puja Orders', value: data.totalPujaOrders || 0, color: '#10b981', icon: 'temple_hindu' },
-    { title: 'Total Course Orders', value: data.totalCourseOrders || 0, color: '#6366f1', icon: 'school' },
+    { title: 'Call Request', value: data.totalCallRequest || 0, color: '#7c3aed' },
+    { title: 'Chat Request', value: data.totalChatRequest || 0, color: '#2563eb' },
+    { title: 'AI Chat Request', value: data.totalaiChatRequest || 0, color: '#8b5cf6' },
+    { title: 'Report Request', value: data.totalReportRequest || 0, color: '#059669' },
+    { title: 'Total Earning', value: data.totalEarning || 0, color: '#d97706', isCurrency: true },
+    { title: 'Total Customer', value: data.totalCustomer || 0, color: '#dc2626' },
+    { title: `Total ${professionTitle}`, value: data.totalAstrologer || 0, color: '#0891b2' },
+    { title: 'Total Orders', value: data.totalOrders || 0, color: '#7c3aed' },
+    { title: 'Total Stories', value: data.totalStories || 0, color: '#ec4899' },
+    { title: 'Total Exotel Calls', value: data.totalExotelReport || 0, color: '#f59e0b' },
+    { title: 'Total Puja Orders', value: data.totalPujaOrders || 0, color: '#10b981' },
+    { title: 'Total Course Orders', value: data.totalCourseOrders || 0, color: '#6366f1' },
   ];
 
   const handleVerify = async (astrologerId) => {
-    if (!window.confirm('Are you sure you want to change verification status?')) return;
+    const result = await Swal.fire({
+      title: 'Verify Astrologer?',
+      text: 'Are you sure you want to change verification status?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, Verify',
+      cancelButtonText: 'Cancel'
+    });
+    if (!result.isConfirmed) return;
     try {
       await dashboardApi.verifyAstrologer({ filed_id: astrologerId });
-      window.location.reload();
+      Swal.fire({ title: 'Success!', text: 'Verification status updated.', icon: 'success', timer: 1500, showConfirmButton: false });
+      setTimeout(() => window.location.reload(), 1500);
     } catch (e) {
-      alert('Failed to update verification status');
+      Swal.fire({ title: 'Error', text: 'Failed to update verification status', icon: 'error' });
     }
+  };
+
+  const handleSchedule = async () => {
+    if (!scheduleDate || !scheduleModal) return;
+    try {
+      await astrologerApi.editTotalOrder({ astrologerId: scheduleModal.id, interviewDate: scheduleDate, interviewStatus: 'Scheduled' });
+      Swal.fire({ title: 'Scheduled!', text: 'Interview scheduled & email sent.', icon: 'success', timer: 1500, showConfirmButton: false });
+      setScheduleModal(null); setScheduleDate('');
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (e) { Swal.fire({ title: 'Error', text: 'Failed to schedule', icon: 'error' }); }
+  };
+
+  const handleReject = async () => {
+    if (!rejectModal) return;
+    try {
+      await astrologerApi.editTotalOrder({ astrologerId: rejectModal.id, interviewStatus: 'Rejected', rejectionReason: rejectReason });
+      Swal.fire({ title: 'Rejected', icon: 'info', timer: 1500, showConfirmButton: false });
+      setRejectModal(null); setRejectReason('');
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (e) { Swal.fire({ title: 'Error', text: 'Failed to reject', icon: 'error' }); }
   };
 
   // Chart.js config - Monthly Earning Report (Line Chart) - EXACT Laravel match
@@ -149,91 +196,92 @@ const Dashboard = () => {
     }
   };
 
-  const cardStyle = {
-    background: '#fff', padding: 20, borderRadius: 10,
-    boxShadow: '0 2px 10px rgba(0,0,0,0.05)', textAlign: 'center'
+  const hexToRgba = (hex, alpha) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
-
-  const tableContainerStyle = {
-    background: '#fff', borderRadius: 10, padding: 20,
-    boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: 20
-  };
-
-  const thStyle = { padding: '10px 15px', textAlign: 'left', fontSize: 13, fontWeight: 600, borderBottom: '2px solid #e5e7eb' };
-  const tdStyle = { padding: '10px 15px', borderBottom: '1px solid #f0f0f0' };
 
   return (
     <div>
-      <h2 style={{ marginBottom: 25 }}>Dashboard</h2>
-
-      {/* 12 Stat Cards - EXACT Laravel blade match */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 15, marginBottom: 30 }}>
-        {stats.map((s, i) => (
-          <div key={i} style={{ ...cardStyle, borderLeft: `4px solid ${s.color}` }}>
-            <h4 style={{ color: '#666', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, marginTop: 0 }}>{s.title}</h4>
-            <p style={{ fontSize: 26, fontWeight: 700, color: s.color, margin: 0 }}>{s.value}</p>
-          </div>
-        ))}
+      {/* Page Header */}
+      <div className="db-topbar">
+        <LayoutDashboard size={20} className="db-topbar-icon" />
+        <h2 className="db-title">Dashboard</h2>
       </div>
 
-      {/* Charts Row - 2 charts side by side like Laravel */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 30 }}>
-        {/* Monthly Earning Report - Line Chart */}
-        <div style={tableContainerStyle}>
-          <h3 style={{ marginBottom: 15, marginTop: 0, fontSize: 16 }}>Monthly Earning Report</h3>
-          <div style={{ height: 300 }}>
+      {/* 12 Stat Cards */}
+      <div className="db-stats-grid">
+        {stats.map((s, i) => {
+          const IconComp = STAT_ICONS[i];
+          return (
+            <div key={i} className="db-stat-card" style={{ borderLeftColor: s.color }}>
+              <div className="db-stat-icon" style={{ background: hexToRgba(s.color, 0.1) }}>
+                <IconComp size={20} color={s.color} />
+              </div>
+              <div className="db-stat-info">
+                <h4 className="db-stat-title">{s.title}</h4>
+                <p className="db-stat-value" style={{ color: s.color }}>
+                  {s.isCurrency ? `\u20B9${formatNumber(s.value)}` : formatNumber(s.value)}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Charts Row */}
+      <div className="db-charts-row">
+        <div className="db-chart-card">
+          <h3 className="db-chart-title">Monthly Earning Report</h3>
+          <div className="db-chart-wrap">
             <Line data={earningChartData} options={earningChartOptions} />
           </div>
         </div>
-
-        {/* Monthly Request Report - Bar Chart */}
-        <div style={tableContainerStyle}>
-          <h3 style={{ marginBottom: 15, marginTop: 0, fontSize: 16 }}>Monthly Request Report</h3>
-          <div style={{ height: 300 }}>
+        <div className="db-chart-card">
+          <h3 className="db-chart-title">Monthly Request Report</h3>
+          <div className="db-chart-wrap">
             <Bar data={requestChartData} options={requestChartOptions} />
           </div>
         </div>
       </div>
 
-      {/* Top 10 Verified Astrologers - EXACT Laravel blade match */}
+      {/* Top Astrologers Table */}
       {data.topAstrologer && data.topAstrologer.length > 0 && (
-        <div style={tableContainerStyle}>
-          <h3 style={{ marginBottom: 15, marginTop: 0, fontSize: 16 }}>Top {professionTitle}s</h3>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="db-section">
+          <h3 className="db-section-title">Top {professionTitle}s</h3>
+          <div className="cust-table-wrap">
+            <table className="cust-table">
               <thead>
-                <tr style={{ background: '#f8f9fa' }}>
-                  <th style={thStyle}>#</th>
-                  <th style={thStyle}>Profile</th>
-                  <th style={thStyle}>Name</th>
-                  <th style={thStyle}>Contact</th>
-                  <th style={thStyle}>Total Requests</th>
-                  <th style={thStyle}>Languages</th>
+                <tr>
+                  <th>#</th>
+                  <th>Profile</th>
+                  <th>Name</th>
+                  <th>Contact</th>
+                  <th>Total Requests</th>
+                  <th>Languages</th>
                 </tr>
               </thead>
               <tbody>
                 {data.topAstrologer.map((a, i) => (
                   <tr key={a.id || i}>
-                    <td style={tdStyle}>{i + 1}</td>
-                    <td style={tdStyle}>
+                    <td>{i + 1}</td>
+                    <td>
                       <img
+                        className="cust-avatar"
                         src={a.profileImage ? (a.profileImage.startsWith('http') ? a.profileImage : `/public/storage/images/${a.profileImage}`) : '/default-avatar.png'}
                         alt={a.name}
-                        style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }}
                         onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="%23ddd"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="16" fill="%23999">?</text></svg>'; }}
                       />
                     </td>
-                    <td style={{ ...tdStyle, fontWeight: 500 }}>{a.name}</td>
-                    <td style={{ ...tdStyle, fontSize: 13 }}>{a.contactNo || '-'}</td>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>
-                      <span style={{ display: 'inline-block', background: '#eff6ff', color: '#2563eb', padding: '2px 8px', borderRadius: 4, fontSize: 12, marginRight: 4 }}>
-                        Calls: {a.totalCallRequest || 0}
-                      </span>
-                      <span style={{ display: 'inline-block', background: '#f0fdf4', color: '#059669', padding: '2px 8px', borderRadius: 4, fontSize: 12 }}>
-                        Chats: {a.totalChatRequest || 0}
-                      </span>
+                    <td className="cust-name-cell">{a.name}</td>
+                    <td>{a.contactNo || '-'}</td>
+                    <td>
+                      <span className="cust-req-badge purple">Calls: {a.totalCallRequest || 0}</span>
+                      <span className="cust-req-badge blue">Chats: {a.totalChatRequest || 0}</span>
                     </td>
-                    <td style={{ ...tdStyle, fontSize: 13, color: '#666' }}>{a.languageKnown || '-'}</td>
+                    <td>{a.languageKnown || '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -242,63 +290,57 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Unverified Astrologers - EXACT Laravel blade match with Verify/View buttons */}
+      {/* Pending Astrologers Table */}
       {data.unverifiedAstrologer && data.unverifiedAstrologer.length > 0 && (
-        <div style={tableContainerStyle}>
-          <h3 style={{ marginBottom: 15, marginTop: 0, fontSize: 16 }}>
-            Unverified {professionTitle}s
-            <span style={{ background: '#fef2f2', color: '#dc2626', padding: '2px 10px', borderRadius: 12, fontSize: 13, marginLeft: 10 }}>
-              {data.unverifiedAstrologer.length}
-            </span>
+        <div className="db-section">
+          <h3 className="db-section-title">
+            Pending {professionTitle}s
+            <span className="db-badge-count">{data.unverifiedAstrologer.length}</span>
           </h3>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="cust-table-wrap">
+            <table className="cust-table">
               <thead>
-                <tr style={{ background: '#f8f9fa' }}>
-                  <th style={thStyle}>#</th>
-                  <th style={thStyle}>Profile</th>
-                  <th style={thStyle}>Name</th>
-                  <th style={thStyle}>Contact</th>
-                  <th style={thStyle}>Skills</th>
-                  <th style={thStyle}>Languages</th>
-                  <th style={thStyle}>Action</th>
+                <tr>
+                  <th>#</th>
+                  <th>Profile</th>
+                  <th>Name</th>
+                  <th>Contact</th>
+                  <th>Skills</th>
+                  <th>Languages</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {data.unverifiedAstrologer.map((a, i) => (
                   <tr key={a.id || i}>
-                    <td style={tdStyle}>{i + 1}</td>
-                    <td style={tdStyle}>
-                      <img
-                        src={a.profileImage ? (a.profileImage.startsWith('http') ? a.profileImage : `/public/storage/images/${a.profileImage}`) : '/default-avatar.png'}
-                        alt={a.name}
-                        style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }}
-                        onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="%23ddd"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="16" fill="%23999">?</text></svg>'; }}
-                      />
+                    <td>{i + 1}</td>
+                    <td>
+                      <img className="cust-avatar"
+                        src={a.profileImage ? (a.profileImage.startsWith('http') ? a.profileImage : `/public/storage/images/${a.profileImage}`) : 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="%23e5e7eb" rx="20"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="16" fill="%23999">?</text></svg>'}
+                        alt={a.name} onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="%23e5e7eb" rx="20"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="16" fill="%23999">?</text></svg>'; }} />
                     </td>
-                    <td style={{ ...tdStyle, fontWeight: 500 }}>{a.name}</td>
-                    <td style={{ ...tdStyle, fontSize: 13 }}>{a.contactNo || '-'}</td>
-                    <td style={{ ...tdStyle, fontSize: 13, color: '#666' }}>{a.allSkill || '-'}</td>
-                    <td style={{ ...tdStyle, fontSize: 13, color: '#666' }}>{a.languageKnown || '-'}</td>
-                    <td style={tdStyle}>
-                      <button
-                        onClick={() => handleVerify(a.id)}
-                        style={{
-                          background: '#059669', color: '#fff', border: 'none',
-                          padding: '5px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12, marginRight: 5
-                        }}
-                      >
-                        Verify
-                      </button>
-                      <button
-                        onClick={() => window.location.href = `/astrologers/${a.id}`}
-                        style={{
-                          background: '#2563eb', color: '#fff', border: 'none',
-                          padding: '5px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12
-                        }}
-                      >
-                        View
-                      </button>
+                    <td className="cust-name-cell">{a.name}</td>
+                    <td>{a.contactNo || '-'}</td>
+                    <td className="cust-date-cell">{a.allSkill || '-'}</td>
+                    <td className="cust-date-cell">{a.languageKnown || '-'}</td>
+                    <td>
+                      <div className="cust-actions">
+                        <button className="cust-action-btn cust-action-view" title="View" onClick={() => window.location.href = `/admin/astrologers/${a.id}`}>
+                          <Eye size={15} />
+                        </button>
+                        {a.interviewStatus === 'Scheduled' ? (
+                          <button className="cust-action-btn cust-action-edit" title="Approve" onClick={() => handleVerify(a.id)}>
+                            <ShieldCheck size={15} />
+                          </button>
+                        ) : (
+                          <button className="cust-action-btn cust-action-recharge" title="Schedule Interview" onClick={() => { setScheduleModal(a); setScheduleDate(''); }}>
+                            <Calendar size={15} />
+                          </button>
+                        )}
+                        <button className="cust-action-btn cust-action-delete" title="Reject" onClick={() => { setRejectModal(a); setRejectReason(''); }}>
+                          <ShieldX size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -307,143 +349,187 @@ const Dashboard = () => {
           </div>
         </div>
       )}
-      {/* ========== BUSINESS REPORT ========== */}
+
+      {/* Interview Schedule Modal */}
+      {scheduleModal && (
+        <div className="cust-overlay" onClick={() => setScheduleModal(null)}>
+          <div className="cust-modal cust-modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Schedule Interview - {scheduleModal.name}</h3>
+              <button onClick={() => setScheduleModal(null)} className="cust-modal-close"><X size={20} /></button>
+            </div>
+            <div className="cust-modal-body">
+              <div className="cust-form-group">
+                <label>Interview Date & Time *</label>
+                <input type="datetime-local" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} required />
+              </div>
+              <button onClick={handleSchedule} disabled={!scheduleDate} className="cust-btn cust-btn-primary cust-btn-full">
+                <Calendar size={14} /> Schedule & Send Email
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      {rejectModal && (
+        <div className="cust-overlay" onClick={() => setRejectModal(null)}>
+          <div className="cust-modal cust-modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Reject - {rejectModal.name}</h3>
+              <button onClick={() => setRejectModal(null)} className="cust-modal-close"><X size={20} /></button>
+            </div>
+            <div className="cust-modal-body">
+              <div className="cust-form-group">
+                <label>Rejection Reason</label>
+                <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={3} placeholder="Enter reason (optional)" />
+              </div>
+              <button onClick={handleReject} className="cust-btn cust-btn-danger cust-btn-full">
+                <ShieldX size={14} /> Reject Astrologer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Business Report */}
       {report && (
-        <div style={{ marginTop: 30 }}>
-          <div style={{ ...tableContainerStyle, background: 'linear-gradient(135deg, #1a0533, #2d1b69)', color: '#fff', padding: 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 20 }}>Business Report</h3>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', fontSize: 13 }} />
-                <span>to</span>
-                <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', fontSize: 13 }} />
-                <button onClick={() => fetchReport(fromDate, toDate)} style={{ padding: '6px 16px', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Apply</button>
-                <button onClick={() => { setFromDate(''); setToDate(''); fetchReport(); }} style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>Reset</button>
+        <div className="db-report-wrap">
+          <div className="db-report-header">
+            <div className="db-report-header-row">
+              <h3 className="db-report-title">Business Report</h3>
+              <div className="db-report-filters">
+                <input type="date" className="db-report-date-input" value={fromDate} onChange={e => setFromDate(e.target.value)} />
+                <span className="db-report-date-sep">to</span>
+                <input type="date" className="db-report-date-input" value={toDate} onChange={e => setToDate(e.target.value)} />
+                <button className="db-report-btn-apply" onClick={() => fetchReport(fromDate, toDate)}>Apply</button>
+                <button className="db-report-btn-reset" onClick={() => { setFromDate(''); setToDate(''); fetchReport(); }}>Reset</button>
               </div>
             </div>
 
             {/* Summary Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
-              <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 16, textAlign: 'center' }}>
-                <div style={{ fontSize: 12, color: '#c4b5d8', marginBottom: 6 }}>TOTAL RECHARGE</div>
-                <div style={{ fontSize: 24, fontWeight: 700 }}>{'\u20B9'}{report.income?.totalRecharge?.toFixed(2)}</div>
+            <div className="db-summary-grid">
+              <div className="db-summary-card">
+                <div className="db-summary-label">TOTAL RECHARGE</div>
+                <div className="db-summary-value">{'\u20B9'}{formatNumber(report.income?.totalRecharge || 0)}</div>
               </div>
-              <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 16, textAlign: 'center' }}>
-                <div style={{ fontSize: 12, color: '#c4b5d8', marginBottom: 6 }}>TOTAL REVENUE</div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: '#34d399' }}>{'\u20B9'}{report.revenue?.totalRevenue?.toFixed(2)}</div>
+              <div className="db-summary-card">
+                <div className="db-summary-label">TOTAL REVENUE</div>
+                <div className="db-summary-value green">{'\u20B9'}{formatNumber(report.revenue?.totalRevenue || 0)}</div>
               </div>
-              <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 16, textAlign: 'center' }}>
-                <div style={{ fontSize: 12, color: '#c4b5d8', marginBottom: 6 }}>ADMIN EARNING</div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: '#fbbf24' }}>{'\u20B9'}{report.adminEarning?.totalAdminEarning?.toFixed(2)}</div>
+              <div className="db-summary-card">
+                <div className="db-summary-label">ADMIN EARNING</div>
+                <div className="db-summary-value yellow">{'\u20B9'}{formatNumber(report.adminEarning?.totalAdminEarning || 0)}</div>
               </div>
-              <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 16, textAlign: 'center' }}>
-                <div style={{ fontSize: 12, color: '#c4b5d8', marginBottom: 6 }}>ASTROLOGER PAID</div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: '#a78bfa' }}>{'\u20B9'}{report.expenses?.astrologerPaid?.toFixed(2)}</div>
+              <div className="db-summary-card">
+                <div className="db-summary-label">ASTROLOGER PAID</div>
+                <div className="db-summary-value purple">{'\u20B9'}{formatNumber(report.expenses?.astrologerPaid || 0)}</div>
               </div>
             </div>
           </div>
 
-          {/* Money Flow */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginTop: 16 }}>
+          {/* Money Flow Cards */}
+          <div className="db-money-grid">
             {/* Income */}
-            <div style={{ ...tableContainerStyle, borderTop: '4px solid #10b981' }}>
-              <h4 style={{ margin: '0 0 16px', color: '#059669', fontSize: 15 }}>INCOME (Paisa Aaya)</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-                  <span style={{ color: '#666', fontSize: 13 }}>Chat Revenue ({report.revenue?.chat?.count})</span>
-                  <span style={{ fontWeight: 600, color: '#059669' }}>{'\u20B9'}{report.revenue?.chat?.total?.toFixed(2)}</span>
+            <div className="db-money-card income">
+              <h4 className="db-money-title income">INCOME (Paisa Aaya)</h4>
+              <div className="db-money-rows">
+                <div className="db-money-row">
+                  <span className="db-money-row-label">Chat Revenue ({report.revenue?.chat?.count})</span>
+                  <span className="db-money-row-value income">{'\u20B9'}{formatNumber(report.revenue?.chat?.total || 0)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-                  <span style={{ color: '#666', fontSize: 13 }}>Call Revenue ({report.revenue?.call?.count})</span>
-                  <span style={{ fontWeight: 600, color: '#059669' }}>{'\u20B9'}{report.revenue?.call?.total?.toFixed(2)}</span>
+                <div className="db-money-row">
+                  <span className="db-money-row-label">Call Revenue ({report.revenue?.call?.count})</span>
+                  <span className="db-money-row-value income">{'\u20B9'}{formatNumber(report.revenue?.call?.total || 0)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-                  <span style={{ color: '#666', fontSize: 13 }}>AI Chat ({report.revenue?.aiChat?.count})</span>
-                  <span style={{ fontWeight: 600, color: '#059669' }}>{'\u20B9'}{report.revenue?.aiChat?.total?.toFixed(2)}</span>
+                <div className="db-money-row">
+                  <span className="db-money-row-label">AI Chat ({report.revenue?.aiChat?.count})</span>
+                  <span className="db-money-row-value income">{'\u20B9'}{formatNumber(report.revenue?.aiChat?.total || 0)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', background: '#f0fdf4', borderRadius: 8, paddingLeft: 10, paddingRight: 10, marginTop: 6 }}>
-                  <span style={{ fontWeight: 700, color: '#059669' }}>Total Revenue</span>
-                  <span style={{ fontWeight: 700, color: '#059669', fontSize: 16 }}>{'\u20B9'}{report.revenue?.totalRevenue?.toFixed(2)}</span>
+                <div className="db-money-total income">
+                  <span className="db-money-total-label income">Total Revenue</span>
+                  <span className="db-money-total-value income">{'\u20B9'}{formatNumber(report.revenue?.totalRevenue || 0)}</span>
                 </div>
               </div>
             </div>
 
             {/* Admin Commission */}
-            <div style={{ ...tableContainerStyle, borderTop: '4px solid #f59e0b' }}>
-              <h4 style={{ margin: '0 0 16px', color: '#d97706', fontSize: 15 }}>ADMIN COMMISSION</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-                  <span style={{ color: '#666', fontSize: 13 }}>Chat Commission (30%)</span>
-                  <span style={{ fontWeight: 600, color: '#d97706' }}>{'\u20B9'}{report.adminEarning?.chatCommission?.toFixed(2)}</span>
+            <div className="db-money-card commission">
+              <h4 className="db-money-title commission">ADMIN COMMISSION</h4>
+              <div className="db-money-rows">
+                <div className="db-money-row">
+                  <span className="db-money-row-label">Chat Commission (30%)</span>
+                  <span className="db-money-row-value commission">{'\u20B9'}{formatNumber(report.adminEarning?.chatCommission || 0)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-                  <span style={{ color: '#666', fontSize: 13 }}>Call Commission (30%)</span>
-                  <span style={{ fontWeight: 600, color: '#d97706' }}>{'\u20B9'}{report.adminEarning?.callCommission?.toFixed(2)}</span>
+                <div className="db-money-row">
+                  <span className="db-money-row-label">Call Commission (30%)</span>
+                  <span className="db-money-row-value commission">{'\u20B9'}{formatNumber(report.adminEarning?.callCommission || 0)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-                  <span style={{ color: '#666', fontSize: 13 }}>AI Chat (100%)</span>
-                  <span style={{ fontWeight: 600, color: '#d97706' }}>{'\u20B9'}{report.adminEarning?.aiChatRevenue?.toFixed(2)}</span>
+                <div className="db-money-row">
+                  <span className="db-money-row-label">AI Chat (100%)</span>
+                  <span className="db-money-row-value commission">{'\u20B9'}{formatNumber(report.adminEarning?.aiChatRevenue || 0)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', background: '#fffbeb', borderRadius: 8, paddingLeft: 10, paddingRight: 10, marginTop: 6 }}>
-                  <span style={{ fontWeight: 700, color: '#d97706' }}>Total Admin Earning</span>
-                  <span style={{ fontWeight: 700, color: '#d97706', fontSize: 16 }}>{'\u20B9'}{report.adminEarning?.totalAdminEarning?.toFixed(2)}</span>
+                <div className="db-money-total commission">
+                  <span className="db-money-total-label commission">Total Admin Earning</span>
+                  <span className="db-money-total-value commission">{'\u20B9'}{formatNumber(report.adminEarning?.totalAdminEarning || 0)}</span>
                 </div>
               </div>
             </div>
 
             {/* Expenses */}
-            <div style={{ ...tableContainerStyle, borderTop: '4px solid #ef4444' }}>
-              <h4 style={{ margin: '0 0 16px', color: '#dc2626', fontSize: 15 }}>EXPENSES (Paisa Gaya)</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-                  <span style={{ color: '#666', fontSize: 13 }}>Astrologer Paid</span>
-                  <span style={{ fontWeight: 600, color: '#dc2626' }}>{'\u20B9'}{report.expenses?.astrologerPaid?.toFixed(2)}</span>
+            <div className="db-money-card expenses">
+              <h4 className="db-money-title expenses">EXPENSES (Paisa Gaya)</h4>
+              <div className="db-money-rows">
+                <div className="db-money-row">
+                  <span className="db-money-row-label">Astrologer Paid</span>
+                  <span className="db-money-row-value expenses">{'\u20B9'}{formatNumber(report.expenses?.astrologerPaid || 0)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-                  <span style={{ color: '#666', fontSize: 13 }}>Withdrawals Released</span>
-                  <span style={{ fontWeight: 600, color: '#dc2626' }}>{'\u20B9'}{report.expenses?.withdrawReleased?.toFixed(2)}</span>
+                <div className="db-money-row">
+                  <span className="db-money-row-label">Withdrawals Released</span>
+                  <span className="db-money-row-value expenses">{'\u20B9'}{formatNumber(report.expenses?.withdrawReleased || 0)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-                  <span style={{ color: '#666', fontSize: 13 }}>Withdrawals Pending</span>
-                  <span style={{ fontWeight: 600, color: '#f59e0b' }}>{'\u20B9'}{report.expenses?.withdrawPending?.toFixed(2)}</span>
+                <div className="db-money-row">
+                  <span className="db-money-row-label">Withdrawals Pending</span>
+                  <span className="db-money-row-value warning">{'\u20B9'}{formatNumber(report.expenses?.withdrawPending || 0)}</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Recent Transactions */}
-          <div style={{ ...tableContainerStyle, marginTop: 16 }}>
-            <h4 style={{ margin: '0 0 16px', fontSize: 15 }}>Recent Transactions</h4>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: '#f8f9fa' }}>
-                  <th style={thStyle}>Date</th>
-                  <th style={thStyle}>Type</th>
-                  <th style={thStyle}>Customer</th>
-                  <th style={thStyle}>Astrologer</th>
-                  <th style={thStyle}>Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(report.recentTransactions || []).map((t, i) => (
-                  <tr key={i}>
-                    <td style={tdStyle}>{t.created_at ? new Date(t.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '-'}</td>
-                    <td style={tdStyle}>
-                      <span style={{ padding: '2px 10px', borderRadius: 10, fontSize: 12, fontWeight: 600,
-                        background: t.type === 'Chat' ? '#eff6ff' : t.type === 'Call' ? '#f0fdf4' : '#fef3c7',
-                        color: t.type === 'Chat' ? '#2563eb' : t.type === 'Call' ? '#059669' : '#d97706'
-                      }}>{t.type}</span>
-                    </td>
-                    <td style={tdStyle}>{t.userName || '-'}</td>
-                    <td style={tdStyle}>{t.astrologerName || '-'}</td>
-                    <td style={{ ...tdStyle, fontWeight: 600, color: '#059669' }}>{'\u20B9'}{parseFloat(t.amount || 0).toFixed(2)}</td>
+          <div className="db-section">
+            <h3 className="db-section-title">Recent Transactions</h3>
+            <div className="cust-table-wrap">
+              <table className="cust-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Customer</th>
+                    <th>Astrologer</th>
+                    <th>Amount</th>
                   </tr>
-                ))}
-                {(!report.recentTransactions || report.recentTransactions.length === 0) && (
-                  <tr><td colSpan={5} style={{ ...tdStyle, textAlign: 'center', color: '#9ca3af', padding: 20 }}>No transactions found</td></tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {(report.recentTransactions || []).map((t, i) => (
+                    <tr key={i}>
+                      <td>{t.created_at ? new Date(t.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '-'}</td>
+                      <td>
+                        <span className={`cust-req-badge ${t.type === 'Chat' ? 'blue' : t.type === 'Call' ? 'purple' : 'purple'}`}>
+                          {t.type}
+                        </span>
+                      </td>
+                      <td>{t.userName || '-'}</td>
+                      <td>{t.astrologerName || '-'}</td>
+                      <td className="db-txn-amount">{'\u20B9'}{formatNumber(parseFloat(t.amount || 0))}</td>
+                    </tr>
+                  ))}
+                  {(!report.recentTransactions || report.recentTransactions.length === 0) && (
+                    <tr><td colSpan={5} className="db-no-data">No transactions found</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Bot } from 'lucide-react';
 import { aiAstrologerApi } from '../api/services';
+import '../styles/AstrologerForm.css';
 
 const AiAstrologerForm = () => {
   const { id } = useParams();
@@ -111,90 +113,90 @@ const AiAstrologerForm = () => {
   };
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      <div style={styles.card}>
-        <div style={styles.cardHeader}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>{isEdit ? 'Edit' : 'Create'} AI Counsellor</h2>
-        </div>
+    <div className="af-page">
+      <div className="af-header">
+        <Bot size={22} color="#7c3aed" />
+        <h2 className="af-title">{isEdit ? 'Edit' : 'Create'} AI Counsellor</h2>
+      </div>
 
-        <div style={styles.tabBar}>
-          <button
-            type="button"
-            onClick={() => setActiveTab('personal')}
-            style={{ ...styles.tab, ...(activeTab === 'personal' ? styles.activeTab : {}) }}
-          >
-            Personal Detail
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('skill')}
-            style={{ ...styles.tab, ...(activeTab === 'skill' ? styles.activeTab : {}) }}
-          >
-            Skill Detail
-          </button>
-        </div>
+      <div className="af-tabs">
+        <button
+          type="button"
+          onClick={() => setActiveTab('personal')}
+          className={`af-tab ${activeTab === 'personal' ? 'active' : ''}`}
+        >
+          Personal Detail
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('skill')}
+          className={`af-tab ${activeTab === 'skill' ? 'active' : ''}`}
+        >
+          Skill Detail
+        </button>
+      </div>
 
-        <form onSubmit={handleSubmit} style={{ padding: 20 }}>
+      <div className="af-card">
+        <form onSubmit={handleSubmit}>
           {activeTab === 'personal' && (
-            <div>
-              <div style={{ marginBottom: 16 }}>
-                <label style={styles.label}>Name <span style={{ color: 'red' }}>*</span></label>
+            <div className="af-grid">
+              <div className="af-full af-field">
+                <label className="af-label">Name <span className="af-req">*</span></label>
                 <input
                   type="text"
                   name="name"
                   value={form.name}
                   onChange={handleChange}
                   placeholder="Enter name (letters only)"
-                  style={styles.input}
+                  className="af-input"
                   required
                 />
               </div>
 
-              <div style={{ marginBottom: 16 }}>
-                <label style={styles.label}>About</label>
+              <div className="af-full af-field">
+                <label className="af-label">About</label>
                 <textarea
                   name="about"
                   value={form.about}
                   onChange={handleChange}
                   placeholder="Enter about description"
-                  style={{ ...styles.input, minHeight: 100, resize: 'vertical' }}
+                  className="af-textarea"
                 />
               </div>
 
-              <div style={{ marginBottom: 16 }}>
-                <label style={styles.label}>Profile Image</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  style={{ display: 'block', marginBottom: 10 }}
-                />
-                {imagePreview && (
-                  <div style={{ marginTop: 8 }}>
+              <div className="af-full af-field">
+                <label className="af-label">Profile Image</label>
+                <div className="af-img-upload">
+                  {imagePreview && (
                     <img
                       src={imagePreview}
                       alt="Preview"
-                      style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 8, border: '1px solid #d1d5db' }}
+                      className="af-img-preview"
                       onError={(e) => { e.target.style.display = 'none'; }}
                     />
-                  </div>
-                )}
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="af-input"
+                  />
+                </div>
               </div>
             </div>
           )}
 
           {activeTab === 'skill' && (
-            <div>
-              <div style={{ marginBottom: 20 }}>
-                <label style={styles.label}>AI Astrologer Category</label>
-                <div style={styles.checkboxGrid}>
+            <div className="af-grid">
+              <div className="af-full af-field">
+                <label className="af-label">AI Astrologer Category</label>
+                <div className="af-multi-box">
                   {categories.map(cat => (
-                    <label key={cat._id || cat.id} style={styles.checkboxLabel}>
+                    <label key={cat._id || cat.id} className="af-check-label">
                       <input
                         type="checkbox"
                         checked={form.category.includes(cat._id || cat.id)}
                         onChange={() => handleCheckboxChange('category', cat._id || cat.id)}
-                        style={{ marginRight: 6 }}
                       />
                       {cat.name}
                     </label>
@@ -203,16 +205,15 @@ const AiAstrologerForm = () => {
                 </div>
               </div>
 
-              <div style={{ marginBottom: 20 }}>
-                <label style={styles.label}>Primary Skills</label>
-                <div style={styles.checkboxGrid}>
+              <div className="af-full af-field">
+                <label className="af-label">Primary Skills</label>
+                <div className="af-multi-box">
                   {skills.map(skill => (
-                    <label key={skill._id || skill.id} style={styles.checkboxLabel}>
+                    <label key={skill._id || skill.id} className="af-check-label">
                       <input
                         type="checkbox"
                         checked={form.primary_skill.includes(skill._id || skill.id)}
                         onChange={() => handleCheckboxChange('primary_skill', skill._id || skill.id)}
-                        style={{ marginRight: 6 }}
                       />
                       {skill.name}
                     </label>
@@ -221,16 +222,15 @@ const AiAstrologerForm = () => {
                 </div>
               </div>
 
-              <div style={{ marginBottom: 20 }}>
-                <label style={styles.label}>All Skills</label>
-                <div style={styles.checkboxGrid}>
+              <div className="af-full af-field">
+                <label className="af-label">All Skills</label>
+                <div className="af-multi-box">
                   {skills.map(skill => (
-                    <label key={skill._id || skill.id} style={styles.checkboxLabel}>
+                    <label key={skill._id || skill.id} className="af-check-label">
                       <input
                         type="checkbox"
                         checked={form.all_skills.includes(skill._id || skill.id)}
                         onChange={() => handleCheckboxChange('all_skills', skill._id || skill.id)}
-                        style={{ marginRight: 6 }}
                       />
                       {skill.name}
                     </label>
@@ -239,48 +239,51 @@ const AiAstrologerForm = () => {
                 </div>
               </div>
 
-              <div style={styles.grid2}>
-                <div>
-                  <label style={styles.label}>Chat Charge (&#8377;/message)</label>
-                  <input
-                    type="number"
-                    name="chat_charge"
-                    value={form.chat_charge}
-                    onChange={handleChange}
-                    placeholder="e.g. 10"
-                    style={styles.input}
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <label style={styles.label}>Experience In Years</label>
-                  <input
-                    type="number"
-                    name="experience"
-                    value={form.experience}
-                    onChange={handleChange}
-                    placeholder="e.g. 5"
-                    style={styles.input}
-                    min="0"
-                  />
-                </div>
+              <div className="af-field">
+                <label className="af-label">Chat Charge (&#8377;/message)</label>
+                <input
+                  type="number"
+                  name="chat_charge"
+                  value={form.chat_charge}
+                  onChange={handleChange}
+                  placeholder="e.g. 10"
+                  className="af-input"
+                  min="0"
+                />
               </div>
 
-              <div style={{ marginTop: 16 }}>
-                <label style={styles.label}>System Instruction (AI Prompt)</label>
+              <div className="af-field">
+                <label className="af-label">Experience In Years</label>
+                <input
+                  type="number"
+                  name="experience"
+                  value={form.experience}
+                  onChange={handleChange}
+                  placeholder="e.g. 5"
+                  className="af-input"
+                  min="0"
+                />
+              </div>
+
+              <div className="af-full af-field">
+                <label className="af-label">System Instruction (AI Prompt)</label>
                 <textarea
                   name="system_intruction"
                   value={form.system_intruction}
                   onChange={handleChange}
                   placeholder="e.g. You are a Tarot Reader. Provide guidance based on tarot card readings..."
-                  style={{ ...styles.input, minHeight: 120, resize: 'vertical' }}
+                  className="af-textarea"
+                  style={{ minHeight: 120 }}
                 />
               </div>
             </div>
           )}
 
-          <div style={{ marginTop: 24 }}>
-            <button type="submit" style={styles.submitBtn}>
+          <div className="af-footer">
+            <button type="button" className="af-btn-cancel" onClick={() => navigate('/admin/ai-astrologer')}>
+              Cancel
+            </button>
+            <button type="submit" className="af-btn-submit">
               {isEdit ? 'Update' : 'Submit'}
             </button>
           </div>
@@ -288,20 +291,6 @@ const AiAstrologerForm = () => {
       </div>
     </div>
   );
-};
-
-const styles = {
-  card: { background: '#fff', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' },
-  cardHeader: { padding: '16px 20px', borderBottom: '1px solid #e5e7eb' },
-  tabBar: { display: 'flex', borderBottom: '1px solid #e5e7eb' },
-  tab: { padding: '12px 24px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 14, fontWeight: 500, color: '#6b7280', borderBottom: '2px solid transparent', transition: 'all 0.2s' },
-  activeTab: { color: '#7c3aed', borderBottom: '2px solid #7c3aed', fontWeight: 600 },
-  label: { display: 'block', fontWeight: 500, marginBottom: 5, fontSize: 14, color: '#374151' },
-  input: { width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' },
-  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
-  checkboxGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8, padding: 12, border: '1px solid #e5e7eb', borderRadius: 6, maxHeight: 200, overflowY: 'auto' },
-  checkboxLabel: { display: 'flex', alignItems: 'center', fontSize: 13, color: '#374151', cursor: 'pointer' },
-  submitBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '10px 28px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 }
 };
 
 export default AiAstrologerForm;

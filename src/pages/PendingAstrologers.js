@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import DataTable from '../components/DataTable';
 import { astrologerApi } from '../api/services';
+import Loader from '../components/Loader';
+import Swal from 'sweetalert2';
+import { Sparkles, Search, X, Eye, ChevronLeft, ChevronRight, ShieldCheck, ShieldX, Calendar } from 'lucide-react';
+import '../styles/Customers.css';
 
 const PendingAstrologers = () => {
   const [astrologers, setAstrologers] = useState([]);
@@ -35,11 +38,24 @@ const PendingAstrologers = () => {
   useEffect(() => { fetchData(); }, [page, search, fromDate, toDate]);
 
   const handleVerify = async (id) => {
-    if (window.confirm('Are you sure you want to verify this astrologer?')) {
+    const result = await Swal.fire({
+      title: 'Verify Astrologer?',
+      text: 'Are you sure you want to verify this astrologer?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, Verify'
+    });
+    if (result.isConfirmed) {
       try {
         await astrologerApi.verify({ filed_id: id });
+        Swal.fire({ title: 'Verified!', text: 'Astrologer has been verified.', icon: 'success', confirmButtonColor: '#7c3aed', timer: 1500, showConfirmButton: false });
         fetchData();
-      } catch (e) { console.error(e); }
+      } catch (e) {
+        console.error(e);
+        Swal.fire({ title: 'Error!', text: 'Failed to verify astrologer.', icon: 'error', confirmButtonColor: '#7c3aed' });
+      }
     }
   };
 
@@ -53,113 +69,250 @@ const PendingAstrologers = () => {
 
   const handleClear = () => { setSearch(''); setFromDate(''); setToDate(''); setPage(1); };
 
+  const fallbackSvg = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect width="36" height="36" fill="%23e5e7eb" rx="18"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="14" fill="%23999">?</text></svg>';
+
   const ToggleSwitch = ({ checked, onChange }) => (
-    <div onClick={onChange} style={{
-      width: 42, height: 22, borderRadius: 11, cursor: 'pointer', position: 'relative',
-      background: checked ? '#10b981' : '#d1d5db', transition: 'background 0.2s'
-    }}>
-      <div style={{
-        width: 18, height: 18, borderRadius: '50%', background: '#fff', position: 'absolute',
-        top: 2, left: checked ? 22 : 2, transition: 'left 0.2s'
-      }} />
+    <div className="cust-toggle-wrap">
+      <div onClick={onChange} className={`cust-toggle ${checked ? 'on' : ''}`}>
+        <div className="cust-toggle-knob" />
+      </div>
     </div>
   );
 
-  const columns = [
-    { header: '#', render: (_, i) => (pagination?.start || 0) + i },
-    {
-      header: 'Name', render: (row) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {row.profileImage ? <img src={row.profileImage} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} /> :
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#999' }}>{(row.name || '?')[0]}</div>}
-          <span style={{ fontWeight: 500 }}>{row.name}</span>
-        </div>
-      )
-    },
-    {
-      header: 'Contact', render: (row) => (
-        <div><div>{row.contactNo}</div><div style={{ fontSize: 11, color: '#888' }}>{row.email}</div></div>
-      )
-    },
-    { header: 'Gender', key: 'gender' },
-    {
-      header: 'Requests', render: (row) => (
-        <div style={{ fontSize: 12 }}>
-          <span>Call: {row.totalCallRequest || 0}</span> | <span>Chat: {row.totalChatRequest || 0}</span>
-        </div>
-      )
-    },
-    { header: 'Call', render: (row) => <ToggleSwitch checked={row.call_sections == 1} onChange={() => handleSectionToggle(row.id, 'call_sections', row.call_sections)} /> },
-    { header: 'Chat', render: (row) => <ToggleSwitch checked={row.chat_sections == 1} onChange={() => handleSectionToggle(row.id, 'chat_sections', row.chat_sections)} /> },
-    { header: 'Live', render: (row) => <ToggleSwitch checked={row.live_sections == 1} onChange={() => handleSectionToggle(row.id, 'live_sections', row.live_sections)} /> },
-    { header: 'Created', render: (row) => row.created_at ? new Date(row.created_at).toLocaleDateString('en-IN') : '-' },
-    {
-      header: 'Interview', render: (row) => {
-        if (row.interviewStatus === 'Scheduled') return <span style={{ color: '#d97706', fontWeight: 600, fontSize: 12 }}>📅 {row.interviewDate ? new Date(row.interviewDate).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Scheduled'}</span>;
-        if (row.interviewStatus === 'Rejected') return <span style={{ color: '#dc2626', fontWeight: 600, fontSize: 12 }}>❌ Rejected</span>;
-        return <span style={{ color: '#9ca3af', fontSize: 12 }}>Not scheduled</span>;
-      }
-    },
-    {
-      header: 'Actions', render: (row) => (
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {!row.interviewStatus && (
-            <button onClick={() => { setShowInterview(row.id); setInterviewDate(''); }}
-              style={{ background: '#f59e0b', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>Schedule</button>
-          )}
-          {row.interviewStatus === 'Scheduled' && (
-            <button onClick={() => handleVerify(row.id)}
-              style={{ background: '#10b981', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>Approve</button>
-          )}
-          {row.interviewStatus !== 'Rejected' && (
-            <button onClick={() => { setShowReject(row.id); setRejectReason(''); }}
-              style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>Reject</button>
-          )}
-          <button onClick={() => navigate(`/admin/astrologers/${row.id}`)}
-            style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 11 }}>View</button>
-        </div>
-      )
+  const renderPagination = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+    const total = pagination.totalPages;
+    const pages = [];
+
+    if (total <= 7) {
+      for (let i = 1; i <= total; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (page > 3) pages.push('dots-start');
+      const start = Math.max(2, page - 1);
+      const end = Math.min(total - 1, page + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (page < total - 2) pages.push('dots-end');
+      if (!pages.includes(total)) pages.push(total);
     }
-  ];
+
+    return (
+      <div className="cust-pagination">
+        <span className="cust-page-info">
+          Showing {pagination.start || ((page - 1) * 10 + 1)} to {pagination.end || Math.min(page * 10, pagination.totalRecords)} of {pagination.totalRecords} entries
+        </span>
+        <div className="cust-page-btns">
+          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="cust-page-btn">
+            <ChevronLeft size={14} />
+          </button>
+          {pages.map((p) =>
+            typeof p === 'string' ? (
+              <span key={p} className="cust-page-dots">...</span>
+            ) : (
+              <button key={p} onClick={() => setPage(p)} className={`cust-page-btn ${p === page ? 'active' : ''}`}>{p}</button>
+            )
+          )}
+          <button onClick={() => setPage(Math.min(total, page + 1))} disabled={page >= total} className="cust-page-btn">
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div>
-      <div style={{ background: '#fff', padding: 16, borderRadius: 8, marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPage(1); }}
-          style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }} />
-        <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPage(1); }}
-          style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }} />
-        <button onClick={handleClear} style={{ padding: '8px 16px', background: '#6b7280', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>Clear</button>
-        <button onClick={() => navigate('/admin/astrologers/add')}
-          style={{ padding: '8px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, marginLeft: 'auto' }}>+ Add Astrologer</button>
+      {/* Page Top Bar */}
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <Sparkles size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Pending Astrologers</h2>
+            {pagination && <div className="cust-count">{pagination.totalRecords} total</div>}
+          </div>
+        </div>
+        <div className="cust-topbar-right">
+          <button onClick={() => navigate('/admin/astrologers/add')} className="cust-btn cust-btn-primary">
+            + Add Astrologer
+          </button>
+        </div>
       </div>
 
-      <DataTable
-        title="Pending Astrologers"
-        columns={columns}
-        data={astrologers}
-        pagination={pagination}
-        onPageChange={setPage}
-        onSearch={(val) => { setSearch(val); setPage(1); }}
-        searchValue={search}
-      />
+      {/* Filter Bar */}
+      <div className="cust-filterbar">
+        <div className="cust-filter-group cust-filter-search-group">
+          <label className="cust-filter-label">Search</label>
+          <div className="cust-filter-search">
+            <Search size={14} className="cust-search-icon" />
+            <input
+              type="text"
+              placeholder="Search by name or contact..."
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
+              className="cust-input cust-search-input"
+            />
+            {search && (
+              <button onClick={() => { setSearch(''); setPage(1); }} className="cust-search-clear">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="cust-filter-date-row">
+          <div className="cust-filter-group">
+            <label className="cust-filter-label">From</label>
+            <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPage(1); }} className="cust-input cust-date-input" />
+          </div>
+          <div className="cust-filter-group">
+            <label className="cust-filter-label">To</label>
+            <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPage(1); }} className="cust-input cust-date-input" />
+          </div>
+          <div className="cust-filter-actions">
+            {(search || fromDate || toDate) && (
+              <button onClick={handleClear} className="cust-btn cust-btn-danger">
+                <X size={13} /> Clear
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Table Card */}
+      <div className="cust-card">
+        {loading ? <Loader text="Loading pending astrologers..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Profile</th>
+                  <th>Name</th>
+                  <th>Contact</th>
+                  <th>Gender</th>
+                  <th>Requests</th>
+                  <th>Call</th>
+                  <th>Chat</th>
+                  <th>Live</th>
+                  <th>Created</th>
+                  <th>Interview</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {astrologers.length === 0 ? (
+                  <tr><td colSpan={12} className="cust-no-data">No pending astrologers found.</td></tr>
+                ) : astrologers.map((row, i) => (
+                  <tr key={row.id}>
+                    <td>{(pagination?.start || 1) + i}</td>
+                    <td>
+                      {row.profileImage ? (
+                        <img src={row.profileImage} alt="" className="cust-avatar" onError={e => { e.target.src = fallbackSvg; }} />
+                      ) : (
+                        <img src={fallbackSvg} alt="" className="cust-avatar" />
+                      )}
+                    </td>
+                    <td>
+                      <span className="cust-name-cell">{row.name || '-'}</span>
+                    </td>
+                    <td>
+                      <div className="cust-name-cell">{row.contactNo || '-'}</div>
+                      <div className="cust-date-cell">{row.email || ''}</div>
+                    </td>
+                    <td>{row.gender || '-'}</td>
+                    <td>
+                      <span className="cust-req-badge purple">Call: {row.totalCallRequest || 0}</span>
+                      <span className="cust-req-badge blue">Chat: {row.totalChatRequest || 0}</span>
+                    </td>
+                    <td><ToggleSwitch checked={row.call_sections == 1} onChange={() => handleSectionToggle(row.id, 'call_sections', row.call_sections)} /></td>
+                    <td><ToggleSwitch checked={row.chat_sections == 1} onChange={() => handleSectionToggle(row.id, 'chat_sections', row.chat_sections)} /></td>
+                    <td><ToggleSwitch checked={row.live_sections == 1} onChange={() => handleSectionToggle(row.id, 'live_sections', row.live_sections)} /></td>
+                    <td>
+                      <span className="cust-date-cell">
+                        <Calendar size={12} /> {row.created_at ? new Date(row.created_at).toLocaleDateString('en-IN') : '-'}
+                      </span>
+                    </td>
+                    <td>
+                      {row.interviewStatus === 'Scheduled' && (
+                        <span className="cust-req-badge purple">
+                          <Calendar size={11} /> {row.interviewDate ? new Date(row.interviewDate).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Scheduled'}
+                        </span>
+                      )}
+                      {row.interviewStatus === 'Rejected' && (
+                        <span className="cust-verify-badge unverified">Rejected</span>
+                      )}
+                      {!row.interviewStatus && (
+                        <span className="cust-date-cell">Not scheduled</span>
+                      )}
+                      {row.interviewStatus && row.interviewStatus !== 'Scheduled' && row.interviewStatus !== 'Rejected' && (
+                        <span className="cust-date-cell">{row.interviewStatus}</span>
+                      )}
+                    </td>
+                    <td>
+                      <div className="cust-actions">
+                        <button onClick={() => navigate(`/admin/astrologers/${row.id}`)} className="cust-action-btn cust-action-view" title="View">
+                          <Eye size={15} />
+                        </button>
+                        {!row.interviewStatus && (
+                          <button onClick={() => { setShowInterview(row.id); setInterviewDate(''); }} className="cust-action-btn cust-action-edit" title="Schedule Interview">
+                            <Calendar size={15} />
+                          </button>
+                        )}
+                        {row.interviewStatus === 'Scheduled' && (
+                          <button onClick={() => handleVerify(row.id)} className="cust-action-btn cust-action-view" title="Verify">
+                            <ShieldCheck size={15} />
+                          </button>
+                        )}
+                        {row.interviewStatus !== 'Rejected' && (
+                          <button onClick={() => { setShowReject(row.id); setRejectReason(''); }} className="cust-action-btn cust-action-delete" title="Reject">
+                            <ShieldX size={15} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {renderPagination()}
+      </div>
 
       {/* Schedule Interview Modal */}
       {showInterview && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowInterview(null)}>
-          <div style={{ background: '#fff', borderRadius: 12, padding: 24, maxWidth: 400, width: '90%' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 16px' }}>Schedule Interview</h3>
-            <input type="datetime-local" value={interviewDate} onChange={e => setInterviewDate(e.target.value)}
-              style={{ width: '100%', padding: 10, border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, marginBottom: 16, boxSizing: 'border-box' }} />
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={async () => {
-                if (!interviewDate) { alert('Select date & time'); return; }
-                try {
-                  await astrologerApi.editTotalOrder({ astrologerId: showInterview, interviewDate, interviewStatus: 'Scheduled' });
-                  setShowInterview(null); fetchData(); alert('Interview scheduled!');
-                } catch(e) { alert('Failed'); }
-              }} style={{ flex: 1, background: '#7c3aed', color: '#fff', border: 'none', padding: 10, borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}>Schedule</button>
-              <button onClick={() => setShowInterview(null)} style={{ flex: 1, background: '#f3f4f6', color: '#374151', border: 'none', padding: 10, borderRadius: 6, cursor: 'pointer' }}>Cancel</button>
+        <div className="cust-overlay" onClick={() => setShowInterview(null)}>
+          <div className="cust-modal cust-modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Schedule Interview</h3>
+              <button className="cust-modal-close" onClick={() => setShowInterview(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="cust-modal-body">
+              <div className="cust-form-group">
+                <label>Interview Date & Time</label>
+                <input type="datetime-local" value={interviewDate} onChange={e => setInterviewDate(e.target.value)} />
+              </div>
+              <div className="cust-form-row">
+                <button
+                  className="cust-btn cust-btn-primary cust-btn-full"
+                  onClick={async () => {
+                    if (!interviewDate) {
+                      Swal.fire({ title: 'Required', text: 'Please select date & time', icon: 'warning', confirmButtonColor: '#7c3aed' });
+                      return;
+                    }
+                    try {
+                      await astrologerApi.editTotalOrder({ astrologerId: showInterview, interviewDate, interviewStatus: 'Scheduled' });
+                      setShowInterview(null);
+                      fetchData();
+                      Swal.fire({ title: 'Scheduled!', text: 'Interview has been scheduled.', icon: 'success', confirmButtonColor: '#7c3aed', timer: 1500, showConfirmButton: false });
+                    } catch (e) {
+                      Swal.fire({ title: 'Error!', text: 'Failed to schedule interview.', icon: 'error', confirmButtonColor: '#7c3aed' });
+                    }
+                  }}
+                >Schedule</button>
+                <button className="cust-btn cust-btn-ghost cust-btn-full" onClick={() => setShowInterview(null)}>Cancel</button>
+              </div>
             </div>
           </div>
         </div>
@@ -167,20 +320,39 @@ const PendingAstrologers = () => {
 
       {/* Reject Modal */}
       {showReject && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowReject(null)}>
-          <div style={{ background: '#fff', borderRadius: 12, padding: 24, maxWidth: 400, width: '90%' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 16px', color: '#dc2626' }}>Reject Astrologer</h3>
-            <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Enter rejection reason..." rows={3}
-              style={{ width: '100%', padding: 10, border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, marginBottom: 16, boxSizing: 'border-box', resize: 'none' }} />
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={async () => {
-                if (!rejectReason.trim()) { alert('Enter reason'); return; }
-                try {
-                  await astrologerApi.editTotalOrder({ astrologerId: showReject, interviewStatus: 'Rejected', rejectionReason: rejectReason });
-                  setShowReject(null); fetchData(); alert('Astrologer rejected');
-                } catch(e) { alert('Failed'); }
-              }} style={{ flex: 1, background: '#dc2626', color: '#fff', border: 'none', padding: 10, borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}>Reject</button>
-              <button onClick={() => setShowReject(null)} style={{ flex: 1, background: '#f3f4f6', color: '#374151', border: 'none', padding: 10, borderRadius: 6, cursor: 'pointer' }}>Cancel</button>
+        <div className="cust-overlay" onClick={() => setShowReject(null)}>
+          <div className="cust-modal cust-modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Reject Astrologer</h3>
+              <button className="cust-modal-close" onClick={() => setShowReject(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="cust-modal-body">
+              <div className="cust-form-group">
+                <label>Rejection Reason</label>
+                <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Enter rejection reason..." rows={3} />
+              </div>
+              <div className="cust-form-row">
+                <button
+                  className="cust-btn cust-btn-danger cust-btn-full"
+                  onClick={async () => {
+                    if (!rejectReason.trim()) {
+                      Swal.fire({ title: 'Required', text: 'Please enter a reason', icon: 'warning', confirmButtonColor: '#7c3aed' });
+                      return;
+                    }
+                    try {
+                      await astrologerApi.editTotalOrder({ astrologerId: showReject, interviewStatus: 'Rejected', rejectionReason: rejectReason });
+                      setShowReject(null);
+                      fetchData();
+                      Swal.fire({ title: 'Rejected!', text: 'Astrologer has been rejected.', icon: 'success', confirmButtonColor: '#7c3aed', timer: 1500, showConfirmButton: false });
+                    } catch (e) {
+                      Swal.fire({ title: 'Error!', text: 'Failed to reject astrologer.', icon: 'error', confirmButtonColor: '#7c3aed' });
+                    }
+                  }}
+                >Reject</button>
+                <button className="cust-btn cust-btn-ghost cust-btn-full" onClick={() => setShowReject(null)}>Cancel</button>
+              </div>
             </div>
           </div>
         </div>

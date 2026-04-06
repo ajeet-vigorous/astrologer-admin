@@ -1,16 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { aiAstrologerApi } from '../api/services';
+import Loader from '../components/Loader';
+import { Bot, Pencil, Trash2, Plus, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import Swal from 'sweetalert2';
+import '../styles/Customers.css';
 
 const AiAstrologerList = () => {
   const [data, setData] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [deleteModal, setDeleteModal] = useState({ show: false, id: null, name: '' });
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await aiAstrologerApi.getAll({ page, searchString: search });
       const d = res.data?.data || res.data || {};
@@ -19,21 +24,30 @@ const AiAstrologerList = () => {
     } catch (err) {
       console.error('Error fetching AI astrologers:', err);
     }
+    setLoading(false);
   }, [page, search]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const confirmDelete = (id, name) => {
-    setDeleteModal({ show: true, id, name });
-  };
-
-  const handleDelete = async () => {
-    try {
-      await aiAstrologerApi.delete(deleteModal.id);
-      setDeleteModal({ show: false, id: null, name: '' });
-      fetchData();
-    } catch (err) {
-      console.error('Error deleting AI astrologer:', err);
+  const handleDelete = async (id, name) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `You want to delete "${name}"? This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#7c3aed',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, Delete',
+      cancelButtonText: 'Cancel',
+    });
+    if (result.isConfirmed) {
+      try {
+        await aiAstrologerApi.delete(id);
+        Swal.fire({ title: 'Deleted!', icon: 'success', confirmButtonColor: '#7c3aed', timer: 1500, showConfirmButton: false });
+        fetchData();
+      } catch (err) {
+        Swal.fire({ title: 'Error!', text: 'Failed to delete', icon: 'error', confirmButtonColor: '#7c3aed' });
+      }
     }
   };
 
@@ -42,154 +56,143 @@ const AiAstrologerList = () => {
     return str.length > len ? str.substring(0, len) + '...' : str;
   };
 
-  const getSkillNames = (skills) => {
-    if (!skills || !Array.isArray(skills) || skills.length === 0) return '--';
-    return skills.map(s => s.name || s).join(', ');
-  };
-
   const perPage = 15;
   const startIndex = pagination ? pagination.start : ((page - 1) * perPage + 1);
 
+  const renderPagination = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+    const pages = [];
+    for (let i = 1; i <= Math.min(pagination.totalPages, 15); i++) pages.push(i);
+    return (
+      <div className="cust-pagination">
+        <span className="cust-page-info">
+          Showing {pagination.start} to {pagination.end} of {pagination.totalRecords} entries
+        </span>
+        <div className="cust-page-btns">
+          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="cust-page-btn">
+            <ChevronLeft size={14} />
+          </button>
+          {pages.map(p => (
+            <button key={p} onClick={() => setPage(p)} className={`cust-page-btn ${p === pagination.page ? 'active' : ''}`}>
+              {p}
+            </button>
+          ))}
+          {pagination.totalPages > 15 && <span className="cust-page-dots">...</span>}
+          <button onClick={() => setPage(Math.min(pagination.totalPages, page + 1))} disabled={page >= pagination.totalPages} className="cust-page-btn">
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div>
-      <div style={styles.card}>
-        <div style={styles.header}>
-          <h3 style={{ margin: 0, fontSize: 18 }}>AI Counsellors</h3>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <input
-              type="text"
-              placeholder="Search..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              style={styles.searchInput}
-            />
-            <button onClick={() => navigate('/admin/ai-astrologer/create')} style={styles.primaryBtn}>
-              Create AI Counsellor
-            </button>
+      {/* Page Top Bar */}
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <Bot size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">AI Counsellors</h2>
+            {pagination && <div className="cust-count">{pagination.totalRecords} total</div>}
           </div>
         </div>
-
-        <div style={{ overflowX: 'auto' }}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>#</th>
-                <th style={styles.th}>Profile Image</th>
-                <th style={styles.th}>NAME</th>
-                <th style={styles.th}>About</th>
-                <th style={styles.th}>Category</th>
-                <th style={styles.th}>Primary Skill</th>
-                <th style={styles.th}>All Skills</th>
-                <th style={styles.th}>Chat Charge (&#8377;)</th>
-                <th style={styles.th}>Experience</th>
-                <th style={styles.th}>System Instruction</th>
-                <th style={styles.th}>ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.length > 0 ? data.map((row, i) => (
-                <tr key={row._id || row.id || i} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                  <td style={styles.td}>{startIndex + i}</td>
-                  <td style={styles.td}>
-                    {row.image ? (
-                      <img
-                        src={row.image.startsWith('http') ? row.image : '/' + row.image}
-                        alt={row.name}
-                        style={{ width: 45, height: 45, borderRadius: '50%', objectFit: 'cover' }}
-                        onError={(e) => { e.target.style.display = 'none'; }}
-                      />
-                    ) : (
-                      <div style={{ width: 45, height: 45, borderRadius: '50%', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: 12 }}>N/A</div>
-                    )}
-                  </td>
-                  <td style={styles.td}>{row.name || '--'}</td>
-                  <td style={styles.td} title={row.about}>{truncate(row.about, 50)}</td>
-                  <td style={styles.td}>{row.categoryList ? row.categoryList.map(c => c.name).join(', ') : row.astrologerCategoryId || '--'}</td>
-                  <td style={styles.td}>{row.primarySkillList ? row.primarySkillList.map(s => s.name).join(', ') : row.primary_skill || '--'}</td>
-                  <td style={styles.td}>{row.allSkillsList ? row.allSkillsList.map(s => s.name).join(', ') : row.all_skills || '--'}</td>
-                  <td style={styles.td}>{row.chat_charge != null ? '₹' + row.chat_charge : '--'}</td>
-                  <td style={styles.td}>{row.experience != null ? row.experience + ' yrs' : '--'}</td>
-                  <td style={styles.td} title={row.system_intruction}>{truncate(row.system_intruction, 30)}</td>
-                  <td style={styles.td}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => navigate(`/admin/ai-astrologer/edit/${row._id || row.id}`)} style={styles.editBtn}>Edit</button>
-                      <button onClick={() => confirmDelete(row._id || row.id, row.name)} style={styles.deleteBtn}>Delete</button>
-                    </div>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={11} style={{ ...styles.td, textAlign: 'center', padding: 30, color: '#9ca3af' }}>No data found</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        <div className="cust-topbar-right">
+          <button onClick={() => navigate('/admin/ai-astrologer/create')} className="cust-btn cust-btn-primary">
+            <Plus size={15} /> Create AI Counsellor
+          </button>
         </div>
-
-        {pagination && (
-          <div style={styles.pagination}>
-            <span style={{ fontSize: 13, color: '#6b7280' }}>
-              Showing {pagination.start} to {pagination.end} of {pagination.totalRecords} entries
-            </span>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {Array.from({ length: pagination.totalPages }, (_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() => setPage(i + 1)}
-                  style={{
-                    ...styles.pageBtn,
-                    background: pagination.page === i + 1 ? '#7c3aed' : '#fff',
-                    color: pagination.page === i + 1 ? '#fff' : '#374151',
-                    border: pagination.page === i + 1 ? '1px solid #7c3aed' : '1px solid #d1d5db'
-                  }}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
-      {deleteModal.show && (
-        <div style={styles.overlay}>
-          <div style={styles.modal}>
-            <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <div style={{ width: 60, height: 60, borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
-                <span style={{ fontSize: 30, color: '#dc2626' }}>!</span>
-              </div>
-              <h3 style={{ margin: '0 0 8px', fontSize: 18 }}>Are you sure?</h3>
-              <p style={{ margin: 0, color: '#6b7280', fontSize: 14 }}>
-                You want to delete <strong>{deleteModal.name}</strong>? This action cannot be undone.
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button onClick={() => setDeleteModal({ show: false, id: null, name: '' })} style={styles.cancelBtn}>Cancel</button>
-              <button onClick={handleDelete} style={styles.confirmDeleteBtn}>Yes, Delete</button>
-            </div>
+      {/* Filters Bar */}
+      <div className="cust-filterbar">
+        <div className="cust-filter-group cust-filter-search-group">
+          <label className="cust-filter-label">Search</label>
+          <div className="cust-filter-search">
+            <Search size={14} className="cust-search-icon" />
+            <input
+              type="text"
+              placeholder="Search by name..."
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
+              onKeyDown={e => { if (e.key === 'Enter') { setPage(1); fetchData(); } }}
+              className="cust-input cust-search-input"
+            />
+            {search && (
+              <button onClick={() => { setSearch(''); setPage(1); }} className="cust-search-clear">
+                <X size={13} />
+              </button>
+            )}
           </div>
         </div>
-      )}
+      </div>
+
+      <div className="cust-card">
+        {/* Table */}
+        {loading ? <Loader text="Loading AI counsellors..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Profile Image</th>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Primary Skill</th>
+                  <th>All Skills</th>
+                  <th>Chat Charge (&#8377;)</th>
+                  <th>Experience</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length === 0 ? (
+                  <tr><td colSpan={9} className="cust-no-data">No AI counsellors found.</td></tr>
+                ) : data.map((row, i) => (
+                  <tr key={row._id || row.id || i}>
+                    <td>{startIndex + i}</td>
+                    <td>
+                      {row.image ? (
+                        <img
+                          src={row.image.startsWith('http') ? row.image : '/' + row.image}
+                          alt={row.name}
+                          className="cust-avatar"
+                          onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect width="36" height="36" fill="%23e5e7eb" rx="18"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="14" fill="%23999">N/A</text></svg>'; }}
+                        />
+                      ) : (
+                        <img
+                          src='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect width="36" height="36" fill="%23e5e7eb" rx="18"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="14" fill="%23999">N/A</text></svg>'
+                          alt="" className="cust-avatar"
+                        />
+                      )}
+                    </td>
+                    <td className="cust-name-cell">{row.name || '--'}</td>
+                    <td>{row.categoryList ? row.categoryList.map(c => c.name).join(', ') : row.astrologerCategoryId || '--'}</td>
+                    <td>{row.primarySkillList ? row.primarySkillList.map(s => s.name).join(', ') : row.primary_skill || '--'}</td>
+                    <td>{row.allSkillsList ? row.allSkillsList.map(s => s.name).join(', ') : row.all_skills || '--'}</td>
+                    <td>{row.chat_charge != null ? '\u20B9' + row.chat_charge : '--'}</td>
+                    <td>{row.experience != null ? row.experience + ' yrs' : '--'}</td>
+                    <td>
+                      <div className="cust-actions">
+                        <button onClick={() => navigate(`/admin/ai-astrologer/edit/${row._id || row.id}`)} className="cust-action-btn cust-action-edit" title="Edit">
+                          <Pencil size={15} />
+                        </button>
+                        <button onClick={() => handleDelete(row._id || row.id, row.name)} className="cust-action-btn cust-action-delete" title="Delete">
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {renderPagination()}
+      </div>
     </div>
   );
-};
-
-const styles = {
-  card: { background: '#fff', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' },
-  header: { padding: '16px 20px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 },
-  searchInput: { padding: '8px 14px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, minWidth: 200 },
-  primaryBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
-  th: { background: '#f8f9fa', padding: '10px 12px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: '#374151', borderBottom: '2px solid #e5e7eb', whiteSpace: 'nowrap' },
-  td: { padding: '10px 12px', verticalAlign: 'middle', fontSize: 13, color: '#374151' },
-  editBtn: { background: '#2563eb', color: '#fff', border: 'none', padding: '5px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12, fontWeight: 500 },
-  deleteBtn: { background: '#dc2626', color: '#fff', border: 'none', padding: '5px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12, fontWeight: 500 },
-  pagination: { padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e5e7eb' },
-  pageBtn: { padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 13, fontWeight: 500 },
-  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: '#fff', borderRadius: 12, padding: 30, maxWidth: 400, width: '90%', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' },
-  cancelBtn: { padding: '8px 24px', border: '1px solid #d1d5db', borderRadius: 6, background: '#fff', cursor: 'pointer', fontWeight: 500, fontSize: 14, color: '#374151' },
-  confirmDeleteBtn: { padding: '8px 24px', border: 'none', borderRadius: 6, background: '#dc2626', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 14 }
 };
 
 export default AiAstrologerList;

@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import Modal from '../components/Modal';
+import { FileText, Plus, Pencil, Trash2, Search, X, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import Swal from 'sweetalert2';
 import { blogApi } from '../api/services';
+import Loader from '../components/Loader';
+import '../styles/Customers.css';
+import '../styles/Blogs.css';
+
+import getImgSrc from '../utils/getImageUrl';
 
 const Blogs = () => {
   const [data, setData] = useState([]);
@@ -13,10 +19,8 @@ const Blogs = () => {
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
   const [statusId, setStatusId] = useState(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
   const [viewerImg, setViewerImg] = useState(null);
 
   const emptyForm = { title: '', description: '', author: '', postedOn: '', blogImage: '', previewImage: '' };
@@ -91,8 +95,25 @@ const Blogs = () => {
     } catch (err) { console.error(err); }
   };
 
-  const handleDelete = async () => {
-    try { await blogApi.delete({ del_id: deleteId }); setShowDeleteModal(false); fetchData(); } catch (err) { console.error(err); }
+  const handleDelete = async (id) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'This process cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, Delete'
+    });
+    if (result.isConfirmed) {
+      try {
+        await blogApi.delete({ del_id: id });
+        Swal.fire({ title: 'Deleted!', icon: 'success', confirmButtonColor: '#7c3aed', timer: 1500, showConfirmButton: false });
+        fetchData();
+      } catch (err) {
+        Swal.fire({ title: 'Error!', text: 'Failed to delete', icon: 'error', confirmButtonColor: '#7c3aed' });
+      }
+    }
   };
 
   const handleStatus = async () => {
@@ -112,11 +133,6 @@ const Blogs = () => {
     setShowEditModal(true);
   };
 
-  const getImgSrc = (img) => {
-    if (!img) return null;
-    if (img.startsWith('http') || img.startsWith('data:')) return img;
-    return '/' + img;
-  };
 
   const formatDate = (d) => {
     if (!d) return '--';
@@ -133,188 +149,250 @@ const Blogs = () => {
     return text.length > len ? text.substring(0, len) + '...' : text;
   };
 
-  const renderPagination = () => {
+  const getPageNumbers = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
     const pages = [];
-    for (let i = 1; i <= totalPages; i++) pages.push(i);
-    return (
-      <div style={styles.paginationWrapper}>
-        <div style={styles.showingText}>Showing {totalRecords === 0 ? 0 : start} to {end} of {totalRecords} entries</div>
-        <div style={styles.paginationButtons}>
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ ...styles.pageBtn, ...(page === 1 ? styles.pageBtnDisabled : {}) }}>Prev</button>
-          {pages.map(p => (<button key={p} onClick={() => setPage(p)} style={{ ...styles.pageBtn, ...(p === page ? styles.pageBtnActive : {}) }}>{p}</button>))}
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ ...styles.pageBtn, ...(page === totalPages ? styles.pageBtnDisabled : {}) }}>Next</button>
-        </div>
-      </div>
-    );
+    pages.push(1);
+    if (page > 3) pages.push('...');
+    const rangeStart = Math.max(2, page - 1);
+    const rangeEnd = Math.min(totalPages - 1, page + 1);
+    for (let i = rangeStart; i <= rangeEnd; i++) pages.push(i);
+    if (page < totalPages - 2) pages.push('...');
+    pages.push(totalPages);
+    return pages;
   };
 
   const renderForm = (f, setF, onSubmit, btnText, isEdit) => (
     <form onSubmit={onSubmit}>
-      <div style={{ marginBottom: 12 }}>
-        <label style={styles.label}>Title <span style={{ color: 'red' }}>*</span></label>
-        <input type="text" value={f.title} onChange={e => setF({ ...f, title: e.target.value })} required style={styles.input} placeholder="Blog Title" />
+      <div className="cust-form-group">
+        <label>Title <span className="cust-err">*</span></label>
+        <input type="text" value={f.title} onChange={e => setF({ ...f, title: e.target.value })} required placeholder="Blog Title" />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-        <div>
-          <label style={styles.label}>Author <span style={{ color: 'red' }}>*</span></label>
-          <input type="text" value={f.author} onChange={e => setF({ ...f, author: e.target.value })} required style={styles.input} placeholder="Author Name" />
+      <div className="cust-form-row">
+        <div className="cust-form-group">
+          <label>Author <span className="cust-err">*</span></label>
+          <input type="text" value={f.author} onChange={e => setF({ ...f, author: e.target.value })} required placeholder="Author Name" />
         </div>
-        <div>
-          <label style={styles.label}>Posted On <span style={{ color: 'red' }}>*</span></label>
-          <input type="date" value={f.postedOn} onChange={e => setF({ ...f, postedOn: e.target.value })} required style={styles.input} />
+        <div className="cust-form-group">
+          <label>Posted On <span className="cust-err">*</span></label>
+          <input type="date" value={f.postedOn} onChange={e => setF({ ...f, postedOn: e.target.value })} required />
         </div>
       </div>
-      <div style={{ marginBottom: 12 }}>
-        <label style={styles.label}>Description <span style={{ color: 'red' }}>*</span></label>
-        <textarea value={f.description} onChange={e => setF({ ...f, description: e.target.value })} required style={{ ...styles.input, minHeight: 120 }} placeholder="Blog description..." />
+      <div className="cust-form-group">
+        <label>Description <span className="cust-err">*</span></label>
+        <textarea value={f.description} onChange={e => setF({ ...f, description: e.target.value })} required placeholder="Blog description..." rows={5} />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-        <div>
-          <label style={styles.label}>Blog Image</label>
+      <div className="cust-form-row">
+        <div className="cust-form-group">
+          <label>Blog Image</label>
           {isEdit && f.blogImage && !f.blogImage.startsWith('data:') && (
-            <img src={getImgSrc(f.blogImage)} alt="" style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 6, marginBottom: 8, display: 'block' }} onError={(e) => { e.target.style.display = 'none'; }} />
+            <img src={getImgSrc(f.blogImage)} alt="" className="cust-img-preview" onError={(e) => { e.target.style.display = 'none'; }} />
           )}
           {f.blogImage && f.blogImage.startsWith('data:') && (
-            <img src={f.blogImage} alt="" style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 6, marginBottom: 8, display: 'block' }} />
+            <img src={f.blogImage} alt="" className="cust-img-preview" />
           )}
           <input type="file" accept="image/*" onChange={e => handleImageChange(e, 'blogImage', isEdit)} />
         </div>
-        <div>
-          <label style={styles.label}>Preview Image</label>
+        <div className="cust-form-group">
+          <label>Preview Image</label>
           {isEdit && f.previewImage && !f.previewImage.startsWith('data:') && (
-            <img src={getImgSrc(f.previewImage)} alt="" style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 6, marginBottom: 8, display: 'block' }} onError={(e) => { e.target.style.display = 'none'; }} />
+            <img src={getImgSrc(f.previewImage)} alt="" className="cust-img-preview" onError={(e) => { e.target.style.display = 'none'; }} />
           )}
           {f.previewImage && f.previewImage.startsWith('data:') && (
-            <img src={f.previewImage} alt="" style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 6, marginBottom: 8, display: 'block' }} />
+            <img src={f.previewImage} alt="" className="cust-img-preview" />
           )}
           <input type="file" accept="image/*" onChange={e => handleImageChange(e, 'previewImage', isEdit)} />
         </div>
       </div>
-      <button type="submit" style={styles.addBtn}>{btnText}</button>
+      <button type="submit" className="cust-btn cust-btn-primary cust-btn-full">{btnText}</button>
     </form>
   );
 
   return (
-    <div style={styles.container}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 20, flexWrap: 'wrap' }}>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#1e293b', margin: 0 }}>Blogs</h2>
-        <button onClick={() => { setForm({ ...emptyForm }); setShowAddModal(true); }} style={styles.addBtn}>Add Blog</button>
-        <div style={{ marginLeft: 'auto' }}>
-          <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} style={{ ...styles.input, width: 220 }} placeholder="Search blogs..." />
+    <div>
+      {/* Top Bar */}
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <FileText size={20} className="cust-topbar-icon" />
+          <h2 className="cust-title">Blogs</h2>
+          <span className="cust-count">({totalRecords} total)</span>
+        </div>
+        <div className="cust-topbar-right">
+          <button className="cust-btn cust-btn-primary" onClick={() => { setForm({ ...emptyForm }); setShowAddModal(true); }}>
+            <Plus size={15} /> Add Blog
+          </button>
         </div>
       </div>
 
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 60, background: '#fff', borderRadius: 10 }}><h3 style={{ color: '#9ca3af' }}>Loading...</h3></div>
-      ) : data.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, background: '#fff', borderRadius: 10 }}><h3 style={{ color: '#9ca3af' }}>No Data Available</h3></div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-          {data.map(blog => (
-            <div key={blog.id} style={styles.card}>
-              <div style={styles.cardImgWrap}>
-                {blog.blogImage ? (
-                  <img src={getImgSrc(blog.blogImage)} alt="" style={styles.cardImg}
-                    onClick={() => setViewerImg(getImgSrc(blog.blogImage))}
-                    onError={(e) => { e.target.src = '/build/assets/images/person.png'; }} />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e5e7eb' }}>
-                    <span style={{ color: '#9ca3af', fontSize: 14 }}>No Image</span>
+      {/* Filter / Search Bar */}
+      <div className="cust-filterbar">
+        <div className="cust-filter-search-group">
+          <div className="cust-filter-search">
+            <Search size={15} className="cust-search-icon" />
+            <input
+              type="text"
+              className="cust-input cust-search-input"
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Search blogs..."
+            />
+            {search && (
+              <button className="cust-search-clear" onClick={() => { setSearch(''); setPage(1); }}>
+                <X size={14} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Blog Cards */}
+      <div className="cust-card">
+        {loading ? <Loader /> : data.length === 0 ? (
+          <div className="cust-no-data">No blogs found</div>
+        ) : (
+          <div className="mall-card-grid">
+            {data.map(blog => (
+              <div key={blog.id} className="blog-card">
+                <div className="blog-card-img-wrap" onClick={() => blog.blogImage && setViewerImg(getImgSrc(blog.blogImage))}>
+                  {blog.blogImage ? (
+                    <img
+                      src={getImgSrc(blog.blogImage)}
+                      alt=""
+                      className="blog-card-img"
+                      onError={(e) => { e.target.src = '/build/assets/images/person.png'; }}
+                    />
+                  ) : (
+                    <div className="blog-card-no-img">
+                      <FileText size={28} />
+                      <span>No Image</span>
+                    </div>
+                  )}
+                  <div className="blog-card-overlay">
+                    <span>{truncate(blog.title, 40)}</span>
                   </div>
-                )}
-                <div style={styles.cardOverlay}>
-                  <span style={{ fontWeight: 600, fontSize: 15 }}>{truncate(blog.title, 40)}</span>
+                </div>
+                <div className="blog-card-body">
+                  <div className="blog-card-meta">
+                    <span><strong>Author:</strong> {blog.author || '--'}</span>
+                    <span><strong>Date:</strong> {formatDate(blog.postedOn)}</span>
+                  </div>
+                  <p className="blog-card-desc">{truncate(blog.description, 100)}</p>
+                </div>
+                <div className="blog-card-footer">
+                  <div className="cust-actions">
+                    <button className="cust-action-btn cust-action-edit" title="Edit" onClick={() => openEdit(blog)}>
+                      <Pencil size={15} />
+                    </button>
+                    <button className="cust-action-btn cust-action-delete" title="Delete" onClick={() => handleDelete(blog.id)}>
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                  <div className="cust-toggle-wrap" onClick={() => { setStatusId(blog.id); setShowStatusModal(true); }}>
+                    <div className={`cust-toggle ${blog.isActive ? 'on' : ''}`}>
+                      <div className="cust-toggle-knob"></div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div style={{ padding: '12px 15px' }}>
-                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
-                  <span style={{ fontWeight: 600 }}>Author:</span> {blog.author || '--'} &nbsp;|&nbsp;
-                  <span style={{ fontWeight: 600 }}>Date:</span> {formatDate(blog.postedOn)}
-                </div>
-                <p style={{ fontSize: 13, color: '#374151', margin: 0 }}>{truncate(blog.description, 100)}</p>
-              </div>
-              <div style={styles.cardActions}>
-                <button onClick={() => openEdit(blog)} style={styles.editBtn}>Edit</button>
-                <button onClick={() => { setDeleteId(blog.id); setShowDeleteModal(true); }} style={{ ...styles.editBtn, color: '#ef4444' }}>Delete</button>
-                <label style={styles.switchLabel}>
-                  <input type="checkbox" checked={!!blog.isActive} onChange={() => { setStatusId(blog.id); setShowStatusModal(true); }} />
-                  <span style={{ color: blog.isActive ? '#059669' : '#dc2626' }}>{blog.isActive ? 'Active' : 'Inactive'}</span>
-                </label>
-              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="cust-pagination">
+            <span className="cust-page-info">
+              Showing {totalRecords === 0 ? 0 : start} to {end} of {totalRecords} entries
+            </span>
+            <div className="cust-page-btns">
+              <button className="cust-page-btn" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                <ChevronLeft size={16} />
+              </button>
+              {getPageNumbers().map((p, idx) =>
+                p === '...' ? (
+                  <span key={`dots-${idx}`} className="cust-page-dots">...</span>
+                ) : (
+                  <button
+                    key={p}
+                    className={`cust-page-btn ${p === page ? 'active' : ''}`}
+                    onClick={() => setPage(p)}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+              <button className="cust-page-btn" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+                <ChevronRight size={16} />
+              </button>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
-      {renderPagination()}
-
-      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Blog">
-        {renderForm(form, setForm, handleAdd, 'Add Blog', false)}
-      </Modal>
-
-      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Edit Blog">
-        {renderForm(editForm, setEditForm, handleEdit, 'Save', true)}
-      </Modal>
-
-      {showDeleteModal && (
-        <div style={styles.overlay} onClick={() => setShowDeleteModal(false)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, textAlign: 'center' }}>Are you sure?</h3>
-            <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 8 }}>This process cannot be undone.</p>
-            <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center', gap: 10 }}>
-              <button onClick={() => setShowDeleteModal(false)} style={{ ...styles.addBtn, background: '#6b7280' }}>Cancel</button>
-              <button onClick={handleDelete} style={{ ...styles.addBtn, background: '#ef4444' }}>Delete</button>
+      {/* Add Modal */}
+      {showAddModal && (
+        <div className="cust-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="cust-modal" onClick={e => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Add Blog</h3>
+              <button className="cust-modal-close" onClick={() => setShowAddModal(false)}><X size={18} /></button>
+            </div>
+            <div className="cust-modal-body">
+              {renderForm(form, setForm, handleAdd, 'Add Blog', false)}
             </div>
           </div>
         </div>
       )}
 
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="cust-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="cust-modal" onClick={e => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Edit Blog</h3>
+              <button className="cust-modal-close" onClick={() => setShowEditModal(false)}><X size={18} /></button>
+            </div>
+            <div className="cust-modal-body">
+              {renderForm(editForm, setEditForm, handleEdit, 'Save Changes', true)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Confirmation Modal */}
       {showStatusModal && (
-        <div style={styles.overlay} onClick={() => setShowStatusModal(false)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, textAlign: 'center' }}>Are You Sure?</h3>
-            <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 8 }}>You want to change the status?</p>
-            <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center', gap: 10 }}>
-              <button onClick={handleStatus} style={styles.addBtn}>Yes</button>
-              <button onClick={() => setShowStatusModal(false)} style={{ ...styles.addBtn, background: '#6b7280' }}>Cancel</button>
+        <div className="cust-overlay" onClick={() => setShowStatusModal(false)}>
+          <div className="cust-modal cust-modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="cust-delete-content">
+              <div className="cust-delete-icon">
+                <AlertTriangle size={28} />
+              </div>
+              <h3>Are You Sure?</h3>
+              <p>You want to change the status?</p>
+              <div className="cust-delete-actions">
+                <button className="cust-btn cust-btn-primary" onClick={handleStatus}>Yes</button>
+                <button className="cust-btn cust-btn-ghost" onClick={() => setShowStatusModal(false)}>Cancel</button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* Image Viewer */}
       {viewerImg && (
-        <div style={styles.overlay} onClick={() => setViewerImg(null)}>
-          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }} onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setViewerImg(null)} style={styles.closeBtn}>✕</button>
-            <img src={viewerImg} alt="" style={{ maxWidth: '90vw', maxHeight: '85vh', borderRadius: 8, objectFit: 'contain' }} />
+        <div className="cust-overlay" onClick={() => setViewerImg(null)}>
+          <div className="blog-viewer-wrap" onClick={e => e.stopPropagation()}>
+            <button className="blog-viewer-close" onClick={() => setViewerImg(null)}>
+              <X size={18} />
+            </button>
+            <img src={viewerImg} alt="" className="blog-viewer-img" />
           </div>
         </div>
       )}
     </div>
   );
-};
-
-const styles = {
-  container: { padding: 0 },
-  addBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  label: { fontSize: 13, fontWeight: 500, display: 'block', marginBottom: 4 },
-  input: { width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' },
-  card: { border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
-  cardImgWrap: { position: 'relative', height: 180, overflow: 'hidden', cursor: 'pointer' },
-  cardImg: { width: '100%', height: '100%', objectFit: 'cover' },
-  cardOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 15px', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', color: '#fff' },
-  cardActions: { display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '10px 15px', borderTop: '1px solid #e5e7eb', gap: 20 },
-  editBtn: { background: 'none', border: 'none', color: '#7c3aed', cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  switchLabel: { display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, fontWeight: 500 },
-  paginationWrapper: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 18, flexWrap: 'wrap', gap: 12 },
-  showingText: { fontSize: 13, color: '#6b7280' },
-  paginationButtons: { display: 'flex', gap: 4, flexWrap: 'wrap' },
-  pageBtn: { padding: '6px 14px', border: '1px solid #d1d5db', borderRadius: 4, background: '#fff', color: '#374151', cursor: 'pointer', fontSize: 13 },
-  pageBtnActive: { background: '#7c3aed', color: '#fff', borderColor: '#7c3aed' },
-  pageBtnDisabled: { opacity: 0.5, cursor: 'not-allowed' },
-  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 },
-  modal: { background: '#fff', borderRadius: 12, padding: 30, maxWidth: 400, width: '90%' },
-  closeBtn: { position: 'absolute', top: -15, right: -15, background: '#fff', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }
 };
 
 export default Blogs;

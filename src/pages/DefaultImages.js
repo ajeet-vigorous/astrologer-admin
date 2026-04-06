@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import DataTable from '../components/DataTable';
-import Modal from '../components/Modal';
-import FormInput from '../components/FormInput';
-import StatusBadge from '../components/StatusBadge';
 import { defaultImageApi } from '../api/services';
+import Loader from '../components/Loader';
+import { Image, Plus, Pencil, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import '../styles/Customers.css';
 
 const DefaultImages = () => {
   const [data, setData] = useState([]);
@@ -22,7 +21,8 @@ const DefaultImages = () => {
     setLoading(true);
     try {
       const res = await defaultImageApi.getAll({ page, search });
-      setData(res.data.data || []);
+      const d = res.data.data || res.data.defaultImages || res.data.result || [];
+      setData(Array.isArray(d) ? d : []);
       setPagination(res.data.pagination || null);
     } catch (err) {
       console.error('Error fetching default images:', err);
@@ -85,63 +85,142 @@ const DefaultImages = () => {
     }
   };
 
-  const columns = [
-    { header: '#', render: (row, i) => ((page - 1) * 10) + i + 1 },
-    { header: 'Name', key: 'name' },
-    {
-      header: 'Image',
-      render: (row) => row.image ? (
-        <img src={row.image} alt={row.name} style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: '6px' }} />
-      ) : '-'
-    },
-    {
-      header: 'Status',
-      render: (row) => (
-        <span onClick={() => handleStatusToggle(row)} style={{ cursor: 'pointer' }}>
-          <StatusBadge active={row.status === 1} />
+  const getPageNumbers = () => {
+    if (!pagination) return [];
+    const total = pagination.totalPages;
+    const current = page;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages = [];
+    pages.push(1);
+    if (current > 3) pages.push('...');
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+    return pages;
+  };
+
+  const renderPagination = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+    const pages = getPageNumbers();
+    return (
+      <div className="cust-pagination">
+        <span className="cust-page-info">
+          Showing {((page - 1) * 10) + 1} to {Math.min(page * 10, pagination.totalRecords || 0)} of {pagination.totalRecords || 0}
         </span>
-      )
-    },
-    {
-      header: 'Actions',
-      render: (row) => (
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => openEdit(row)} style={{ padding: '4px 12px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Edit</button>
+        <div className="cust-page-btns">
+          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="cust-page-btn">
+            <ChevronLeft size={14} />
+          </button>
+          {pages.map((p, idx) =>
+            p === '...' ? (
+              <span key={`dots-${idx}`} className="cust-page-dots">...</span>
+            ) : (
+              <button key={p} onClick={() => setPage(p)} className={`cust-page-btn ${p === page ? 'active' : ''}`}>{p}</button>
+            )
+          )}
+          <button onClick={() => setPage(Math.min(pagination.totalPages, page + 1))} disabled={page >= pagination.totalPages} className="cust-page-btn">
+            <ChevronRight size={14} />
+          </button>
         </div>
-      )
-    }
-  ];
+      </div>
+    );
+  };
 
   return (
     <div>
-      <DataTable
-        title="Default Images"
-        columns={columns}
-        data={data}
-        pagination={pagination}
-        onPageChange={setPage}
-        onSearch={setSearch}
-        searchValue={search}
-        headerActions={
-          <button onClick={openAdd} style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>+ Add Image</button>
-        }
-      />
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editData ? 'Edit Default Image' : 'Add Default Image'}>
-        <form onSubmit={handleSubmit}>
-          <FormInput label="Name" name="name" value={form.name} onChange={handleChange} required placeholder="Enter name" />
-          <FormInput label="Image" type="file" name="image" onChange={handleChange} />
-          {editData && editData.image && (
-            <div style={{ marginBottom: '10px' }}>
-              <label style={{ fontSize: '13px', color: '#555' }}>Current Image:</label>
-              <img src={editData.image} alt="current" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: '6px', display: 'block', marginTop: '5px' }} />
-            </div>
-          )}
-          <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-            <button type="submit" style={{ padding: '10px 24px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>{editData ? 'Update' : 'Add'}</button>
-            <button type="button" onClick={() => setShowModal(false)} style={{ padding: '10px 24px', background: '#6b7280', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <Image size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Default Images</h2>
+            {pagination && <div className="cust-count">{pagination.totalRecords || 0} total</div>}
           </div>
-        </form>
-      </Modal>
+        </div>
+        <div className="cust-topbar-right">
+          <button onClick={openAdd} className="cust-btn cust-btn-primary">
+            <Plus size={15} /> Add Image
+          </button>
+        </div>
+      </div>
+
+      <div className="cust-card">
+        {loading ? <Loader text="Loading default images..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Image</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length === 0 ? (
+                  <tr><td colSpan={5} className="cust-no-data">No default images found.</td></tr>
+                ) : data.map((row, i) => (
+                  <tr key={row.id}>
+                    <td>{((page - 1) * 10) + i + 1}</td>
+                    <td className="cust-name-cell">{row.name}</td>
+                    <td>
+                      {row.image ? (
+                        <img src={row.image} alt={row.name} className="cust-avatar" />
+                      ) : '-'}
+                    </td>
+                    <td>
+                      <span
+                        onClick={() => handleStatusToggle(row)}
+                        className={`cust-verify-badge ${row.status === 1 ? 'verified' : 'unverified'}`}
+                      >
+                        {row.status === 1 ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="cust-actions">
+                        <button onClick={() => openEdit(row)} className="cust-action-btn cust-action-edit" title="Edit">
+                          <Pencil size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {renderPagination()}
+      </div>
+
+      {showModal && (
+        <div className="cust-overlay" onClick={() => setShowModal(false)}>
+          <div className="cust-modal cust-modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>{editData ? 'Edit Default Image' : 'Add Default Image'}</h3>
+              <button onClick={() => setShowModal(false)} className="cust-modal-close"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSubmit} className="cust-modal-body">
+              <div className="cust-form-group">
+                <label>Name *</label>
+                <input name="name" value={form.name} onChange={handleChange} required placeholder="Enter name" />
+              </div>
+              <div className="cust-form-group">
+                <label>Image</label>
+                <input type="file" name="image" onChange={handleChange} accept="image/*" />
+              </div>
+              {editData && editData.image && (
+                <div className="cust-form-group">
+                  <label>Current Image</label>
+                  <img src={editData.image} alt="current" className="cust-img-preview" />
+                </div>
+              )}
+              <button type="submit" className="cust-btn cust-btn-primary cust-btn-full">
+                {editData ? 'Update' : 'Add'} Image
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

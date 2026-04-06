@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import DataTable from '../components/DataTable';
 import { kundaliApi } from '../api/services';
+import Loader from '../components/Loader';
+import { ScrollText, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
+import '../styles/Customers.css';
 
 const KundaliEarnings = () => {
   const [data, setData] = useState([]);
@@ -9,8 +11,10 @@ const KundaliEarnings = () => {
   const [searchString, setSearchString] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
       const params = { page };
       if (searchString) params.searchString = searchString;
@@ -20,6 +24,7 @@ const KundaliEarnings = () => {
       setData(res.data.kundaliEarnings || []);
       setPagination({ totalPages: res.data.totalPages, totalRecords: res.data.totalRecords, start: res.data.start, end: res.data.end, page: res.data.page });
     } catch (err) { console.error(err); }
+    setLoading(false);
   }, [page, searchString, fromDate, toDate]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -43,56 +48,134 @@ const KundaliEarnings = () => {
     return d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
-  const columns = [
-    { header: '#', render: (_, i) => (pagination?.start || 0) + i },
-    { header: 'User Type', render: (row) => <div style={{ textAlign: 'center' }}>{row.user_type}</div> },
-    { header: 'User', render: (row) => <div style={{ textAlign: 'center' }}>{row.userName} - {row.userContactNo}</div> },
-    { header: 'Date', render: (row) => <div style={{ textAlign: 'center' }}>{formatDate(row.created_at)}</div> },
-    { header: 'Kundali Type', render: (row) => <div style={{ textAlign: 'center' }}>{row.kundaliType || '--'}</div> },
-    {
-      header: 'PDF', render: (row) => (
-        <div style={{ textAlign: 'center' }}>
-          {row.pdf_link ? (
-            <a href={row.pdf_link.startsWith('http') ? row.pdf_link : '/' + row.pdf_link} target="_blank" rel="noreferrer"
-              style={{ color: '#22c55e', textDecoration: 'none', fontWeight: 500 }}>Download</a>
-          ) : 'No Pdf Available'}
-        </div>
-      )
+  const getSmartPages = () => {
+    if (!pagination) return [];
+    const totalPages = pagination.totalPages;
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
-  ];
+    const pages = new Set([1, totalPages, page, page - 1, page + 1]);
+    const filtered = [...pages].filter(p => p >= 1 && p <= totalPages).sort((a, b) => a - b);
+    const result = [];
+    for (let i = 0; i < filtered.length; i++) {
+      if (i > 0 && filtered[i] - filtered[i - 1] > 1) {
+        result.push('...');
+      }
+      result.push(filtered[i]);
+    }
+    return result;
+  };
+
+  const renderPagination = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+    const smartPages = getSmartPages();
+    return (
+      <div className="cust-pagination">
+        <div className="cust-page-info">Showing {pagination.totalRecords === 0 ? 0 : pagination.start} to {pagination.end} of {pagination.totalRecords} entries</div>
+        <div className="cust-page-btns">
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="cust-page-btn">
+            <ChevronLeft size={16} />
+          </button>
+          {smartPages.map((p, idx) =>
+            p === '...' ? (
+              <span key={`dots-${idx}`} className="cust-page-dots">...</span>
+            ) : (
+              <button key={p} onClick={() => setPage(p)} className={`cust-page-btn${p === page ? ' active' : ''}`}>{p}</button>
+            )
+          )}
+          <button onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))} disabled={page >= pagination.totalPages} className="cust-page-btn">
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
-        <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <input type="text" value={searchString} onChange={e => setSearchString(e.target.value)}
-            placeholder="Search..." style={styles.input} />
-          <button type="submit" style={styles.filterBtn}>Search</button>
-        </form>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <label style={{ fontWeight: 600 }}>From:</label>
-          <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} style={styles.input} />
-          <label style={{ fontWeight: 600 }}>To:</label>
-          <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} style={styles.input} />
-          <button onClick={() => { setPage(1); }} style={styles.filterBtn}>Filter</button>
-          <button onClick={handleClear} style={{ ...styles.filterBtn, background: '#6b7280' }}>Clear</button>
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <ScrollText size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Kundali Earnings</h2>
+            {pagination && <div className="cust-count">{pagination.totalRecords} total</div>}
+          </div>
+        </div>
+        <div className="cust-topbar-right">
+          <div className="cust-filter-date-row">
+            <div className="cust-filter-group">
+              <label className="cust-filter-label">From</label>
+              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="cust-input cust-date-input" />
+            </div>
+            <div className="cust-filter-group">
+              <label className="cust-filter-label">To</label>
+              <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="cust-input cust-date-input" />
+            </div>
+            <div className="cust-filter-actions">
+              <button onClick={() => { setPage(1); }} className="cust-btn cust-btn-primary">Filter</button>
+              <button onClick={handleClear} className="cust-btn cust-btn-ghost">Clear</button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <DataTable
-        title="Kundali Report"
-        columns={columns}
-        data={data}
-        pagination={pagination}
-        onPageChange={setPage}
-      />
+      <div className="cust-filterbar">
+        <div className="cust-filter-group cust-filter-search-group">
+          <label className="cust-filter-label">Search</label>
+          <div className="cust-filter-search">
+            <Search size={14} className="cust-search-icon" />
+            <input type="text" placeholder="Search by name or contact..." value={searchString}
+              onChange={e => setSearchString(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { handleSearch(e); } }}
+              className="cust-input cust-search-input" />
+            {searchString && (
+              <button onClick={() => { setSearchString(''); setPage(1); }} className="cust-search-clear">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="cust-card">
+        {loading ? <Loader text="Loading earnings..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>User Type</th>
+                  <th>User</th>
+                  <th>Date</th>
+                  <th>Kundali Type</th>
+                  <th>PDF</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length === 0 ? (
+                  <tr><td colSpan={6} className="cust-no-data">No earnings found.</td></tr>
+                ) : data.map((row, i) => (
+                  <tr key={row.id || i}>
+                    <td>{(pagination?.start || 0) + i}</td>
+                    <td>{row.user_type}</td>
+                    <td className="cust-name-cell">{row.userName} - {row.userContactNo}</td>
+                    <td className="cust-date-cell">{formatDate(row.created_at)}</td>
+                    <td>{row.kundaliType || '--'}</td>
+                    <td>
+                      {row.pdf_link ? (
+                        <a href={row.pdf_link.startsWith('http') ? row.pdf_link : '/' + row.pdf_link} target="_blank" rel="noreferrer"
+                          className="cust-btn cust-btn-success">Download</a>
+                      ) : 'No Pdf Available'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {renderPagination()}
+      </div>
     </div>
   );
-};
-
-const styles = {
-  input: { padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14 },
-  filterBtn: { background: '#3b82f6', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }
 };
 
 export default KundaliEarnings;

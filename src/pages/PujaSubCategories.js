@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import DataTable from '../components/DataTable';
-import Modal from '../components/Modal';
-import FormInput from '../components/FormInput';
 import { pujaSubCategoryApi } from '../api/services';
+import Loader from '../components/Loader';
+import { HandHeart, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import Swal from 'sweetalert2';
+import '../styles/Customers.css';
+
+import getImgSrc from '../utils/getImageUrl';
 
 const PujaSubCategories = () => {
   const [data, setData] = useState([]);
@@ -13,14 +16,17 @@ const PujaSubCategories = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [form, setForm] = useState({ categoriesId: '', name: '', image: '' });
   const [editForm, setEditForm] = useState({ filed_id: '', categoriesId: '', name: '', image: '' });
+  const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await pujaSubCategoryApi.getAll({ page });
       setData(res.data.categories || []);
       setAllCategories(res.data.AllCategories || []);
       setPagination({ totalPages: res.data.totalPages, totalRecords: res.data.totalRecords, start: res.data.start, end: res.data.end, page: res.data.page });
     } catch (err) { console.error(err); }
+    setLoading(false);
   }, [page]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -64,104 +70,225 @@ const PujaSubCategories = () => {
     } catch (err) { console.error(err); }
   };
 
+  const handleDelete = async (row) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `Delete "${row.name}"? This cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#7c3aed',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, Delete',
+      cancelButtonText: 'Cancel',
+    });
+    if (result.isConfirmed) {
+      try {
+        await pujaSubCategoryApi.delete({ id: row.id });
+        Swal.fire({ title: 'Deleted!', icon: 'success', confirmButtonColor: '#7c3aed', timer: 1500, showConfirmButton: false });
+        fetchData();
+      } catch (e) {
+        Swal.fire({ title: 'Error!', text: 'Failed to delete', icon: 'error', confirmButtonColor: '#7c3aed' });
+      }
+    }
+  };
+
   const openEdit = (cat) => {
     setEditForm({ filed_id: cat.id, categoriesId: cat.category_id, name: cat.name, image: cat.image || '' });
     setShowEditModal(true);
   };
 
-  const getImgSrc = (img) => {
-    if (!img) return '/build/assets/images/default.jpg';
-    if (img.startsWith('http')) return img;
-    return '/' + img;
-  };
 
-  const columns = [
-    { header: '#', render: (_, i) => (pagination?.start || 0) + i },
-    {
-      header: 'Image', render: (row) => (
-        <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden' }}>
-          <img src={getImgSrc(row.image)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            onError={(e) => { e.target.src = '/build/assets/images/default.jpg'; }} />
-        </div>
-      )
-    },
-    { header: 'Category Name', render: (row) => <span style={{ fontWeight: 500 }}>{row.category_name}</span> },
-    { header: 'Name', render: (row) => <span style={{ fontWeight: 500 }}>{row.name}</span> },
-    {
-      header: 'Status', render: (row) => (
-        <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }}>
-          <input type="checkbox" checked={!!row.isActive} onChange={() => handleStatus(row.id)} />
-          <span>{row.isActive ? 'Active' : 'Inactive'}</span>
-        </label>
-      )
-    },
-    {
-      header: 'Actions', render: (row) => (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => openEdit(row)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: 500 }}>Edit</button>
-          <button onClick={async () => { if (!window.confirm('Delete "' + row.name + '"?')) return; try { await pujaSubCategoryApi.delete({ id: row.id }); fetchData(); } catch(e) { alert('Failed'); } }} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontWeight: 500 }}>Delete</button>
-        </div>
-      )
+  const renderPagination = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+    const total = pagination.totalPages;
+    const pages = [];
+
+    if (total <= 7) {
+      for (let i = 1; i <= total; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (page > 3) pages.push('dots-start');
+      for (let i = Math.max(2, page - 1); i <= Math.min(total - 1, page + 1); i++) pages.push(i);
+      if (page < total - 2) pages.push('dots-end');
+      pages.push(total);
     }
-  ];
+
+    return (
+      <div className="cust-pagination">
+        <span className="cust-page-info">Showing {pagination.start} to {pagination.end} of {pagination.totalRecords}</span>
+        <div className="cust-page-btns">
+          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="cust-page-btn"><ChevronLeft size={14} /></button>
+          {pages.map((p, idx) =>
+            typeof p === 'string' ? (
+              <span key={p} className="cust-page-dots">...</span>
+            ) : (
+              <button key={idx} onClick={() => setPage(p)} className={`cust-page-btn ${p === page ? 'active' : ''}`}>{p}</button>
+            )
+          )}
+          <button onClick={() => setPage(Math.min(total, page + 1))} disabled={page >= total} className="cust-page-btn"><ChevronRight size={14} /></button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div>
-      <DataTable
-        title="Puja SubCategories"
-        columns={columns}
-        data={data}
-        pagination={pagination}
-        onPageChange={setPage}
-        headerActions={
-          <button onClick={() => { setForm({ categoriesId: '', name: '', image: '' }); setShowAddModal(true); }} style={styles.addBtn}>Add Puja SubCategories</button>
-        }
-      />
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <HandHeart size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Puja SubCategories</h2>
+            {pagination && <div className="cust-count">{pagination.totalRecords} total</div>}
+          </div>
+        </div>
+        <div className="cust-topbar-right">
+          <button onClick={() => { setForm({ categoriesId: '', name: '', image: '' }); setShowAddModal(true); }} className="cust-btn cust-btn-primary">
+            <Plus size={15} /> Add Puja SubCategory
+          </button>
+        </div>
+      </div>
 
-      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Puja Category">
-        <form onSubmit={handleAdd}>
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ fontWeight: 500, display: 'block', marginBottom: 5 }}>Category</label>
-            <select value={form.categoriesId} onChange={(e) => setForm({ ...form, categoriesId: e.target.value })} style={styles.select} required>
-              <option value="" disabled>--Select Category--</option>
-              {allCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-            </select>
+      <div className="cust-card">
+        {loading ? <Loader text="Loading puja subcategories..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Image</th>
+                  <th>Category Name</th>
+                  <th>Name</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length === 0 ? (
+                  <tr><td colSpan={6} className="cust-no-data">No puja subcategories found.</td></tr>
+                ) : data.map((row, i) => (
+                  <tr key={row.id}>
+                    <td>{(pagination?.start || 1) + i}</td>
+                    <td>
+                      <img
+                        src={getImgSrc(row.image)}
+                        alt={row.name}
+                        className="cust-avatar"
+                        onError={(e) => { e.target.src = '/build/assets/images/default.jpg'; }}
+                      />
+                    </td>
+                    <td className="cust-name-cell">{row.category_name}</td>
+                    <td className="cust-name-cell">{row.name}</td>
+                    <td>
+                      <span
+                        onClick={() => handleStatus(row.id)}
+                        className={`cust-verify-badge ${row.isActive ? 'verified' : 'unverified'}`}
+                      >
+                        {row.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="cust-actions">
+                        <button onClick={() => openEdit(row)} className="cust-action-btn cust-action-edit" title="Edit"><Pencil size={15} /></button>
+                        <button onClick={() => handleDelete(row)} className="cust-action-btn cust-action-delete" title="Delete"><Trash2 size={15} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <FormInput label="Name" name="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Name" />
-          <div style={{ marginTop: 12 }}>
-            <label style={{ fontWeight: 500, display: 'block', marginBottom: 5 }}>SubCategory Image</label>
-            <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, false)} required />
-            {form.image && <img src={form.image} alt="" style={{ width: 150, marginTop: 10 }} />}
-          </div>
-          <div style={{ marginTop: 15 }}><button type="submit" style={styles.addBtn}>Add Sub Category</button></div>
-        </form>
-      </Modal>
+        )}
+        {renderPagination()}
+      </div>
 
-      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Edit Puja Category">
-        <form onSubmit={handleEdit}>
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ fontWeight: 500, display: 'block', marginBottom: 5 }}>Category</label>
-            <select value={editForm.categoriesId} onChange={(e) => setEditForm({ ...editForm, categoriesId: e.target.value })} style={styles.select} required>
-              <option value="" disabled>--Select Category--</option>
-              {allCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-            </select>
+      {/* Add Modal */}
+      {showAddModal && (
+        <div className="cust-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="cust-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Add Puja SubCategory</h3>
+              <button className="cust-modal-close" onClick={() => setShowAddModal(false)}><X size={18} /></button>
+            </div>
+            <div className="cust-modal-body">
+              <form onSubmit={handleAdd}>
+                <div className="cust-form-group">
+                  <label>Category <span className="af-req">*</span></label>
+                  <select value={form.categoriesId} onChange={(e) => setForm({ ...form, categoriesId: e.target.value })} required>
+                    <option value="" disabled>--Select Category--</option>
+                    {allCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                  </select>
+                </div>
+                <div className="cust-form-group">
+                  <label>Name <span className="af-req">*</span></label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                    placeholder="SubCategory Name"
+                  />
+                </div>
+                <div className="cust-form-group">
+                  <label>SubCategory Image <span className="af-req">*</span></label>
+                  <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, false)} required />
+                  {form.image && <img src={form.image} alt="Preview" className="cust-img-preview" />}
+                </div>
+                <button type="submit" className="cust-btn cust-btn-primary cust-btn-full">Add Sub Category</button>
+              </form>
+            </div>
           </div>
-          <FormInput label="Name" name="name" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required placeholder="Name" />
-          <div style={{ marginTop: 12 }}>
-            <label style={{ fontWeight: 500, display: 'block', marginBottom: 5 }}>SubCategory Image</label>
-            {editForm.image && <img src={editForm.image.startsWith('data:') ? editForm.image : getImgSrc(editForm.image)} alt="" style={{ width: 150, marginBottom: 10 }} onError={(e) => { e.target.style.display = 'none'; }} />}
-            <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, true)} />
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="cust-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="cust-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Edit Puja SubCategory</h3>
+              <button className="cust-modal-close" onClick={() => setShowEditModal(false)}><X size={18} /></button>
+            </div>
+            <div className="cust-modal-body">
+              <form onSubmit={handleEdit}>
+                <div className="cust-form-group">
+                  <label>Category <span className="af-req">*</span></label>
+                  <select value={editForm.categoriesId} onChange={(e) => setEditForm({ ...editForm, categoriesId: e.target.value })} required>
+                    <option value="" disabled>--Select Category--</option>
+                    {allCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                  </select>
+                </div>
+                <div className="cust-form-group">
+                  <label>Name <span className="af-req">*</span></label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    required
+                    placeholder="SubCategory Name"
+                  />
+                </div>
+                <div className="cust-form-group">
+                  <label>SubCategory Image</label>
+                  {editForm.image && (
+                    <img
+                      src={getImgSrc(editForm.image)}
+                      alt="Preview"
+                      className="cust-img-preview"
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  )}
+                  <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, true)} />
+                </div>
+                <button type="submit" className="cust-btn cust-btn-primary cust-btn-full">Save</button>
+              </form>
+            </div>
           </div>
-          <div style={{ marginTop: 15 }}><button type="submit" style={styles.addBtn}>Save</button></div>
-        </form>
-      </Modal>
+        </div>
+      )}
     </div>
   );
-};
-
-const styles = {
-  addBtn: { background: '#3b82f6', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
-  select: { width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14 }
 };
 
 export default PujaSubCategories;

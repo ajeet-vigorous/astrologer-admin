@@ -1,110 +1,190 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import DataTable from '../components/DataTable';
-import Modal from '../components/Modal';
 import { rechargeApi } from '../api/services';
+import Loader from '../components/Loader';
+import Modal from '../components/Modal';
+import { IndianRupee, Pencil, Trash2, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import Swal from 'sweetalert2';
+import '../styles/Customers.css';
 
 const Recharge = () => {
   const [data, setData] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [page, setPage] = useState(1);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [editData, setEditData] = useState(null);
   const [form, setForm] = useState({ amount: '', amount_usd: '', cashback: '' });
-  const [editForm, setEditForm] = useState({ filed_id: '', amount: '', amount_usd: '', cashback: '' });
+  const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await rechargeApi.getAll({ page });
       setData(res.data.rechargeAmount || []);
       setPagination({ totalPages: res.data.totalPages, totalRecords: res.data.totalRecords, start: res.data.start, end: res.data.end, page: res.data.page });
     } catch (err) { console.error(err); }
+    setLoading(false);
   }, [page]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const numbersOnly = (value) => value === '' || /^\d*\.?\d*$/.test(value);
 
-  const handleAdd = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    try { await rechargeApi.add(form); setShowAddModal(false); setForm({ amount: '', amount_usd: '', cashback: '' }); fetchData(); } catch (err) { console.error(err); }
+    try {
+      if (editData) {
+        await rechargeApi.edit({ filed_id: editData.id, amount: form.amount, amount_usd: form.amount_usd, cashback: form.cashback });
+      } else {
+        await rechargeApi.add(form);
+      }
+      setShowModal(false);
+      setEditData(null);
+      setForm({ amount: '', amount_usd: '', cashback: '' });
+      fetchData();
+    } catch (err) { console.error(err); }
   };
 
-  const handleEdit = async (e) => {
-    e.preventDefault();
-    try { await rechargeApi.edit(editForm); setShowEditModal(false); fetchData(); } catch (err) { console.error(err); }
+  const handleEdit = (row) => {
+    setEditData(row);
+    setForm({ amount: row.amount || '', amount_usd: row.amount_usd || '', cashback: row.cashback || '' });
+    setShowModal(true);
   };
 
-  const handleDelete = async () => {
-    try { await rechargeApi.delete({ del_id: deleteId }); setShowDeleteModal(false); fetchData(); } catch (err) { console.error(err); }
-  };
-
-  const columns = [
-    { header: '#', render: (_, i) => (pagination?.start || 0) + i },
-    { header: 'Amount (INR)', render: (row) => <span style={{ fontWeight: 500 }}>{row.amount || '- - -'}</span> },
-    { header: 'Amount (USD)', render: (row) => row.amount_usd || '- - -' },
-    { header: 'Cashback', render: (row) => row.cashback ? row.cashback + '%' : '---' },
-    {
-      header: 'Actions', render: (row) => (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
-          <button onClick={() => { setEditForm({ filed_id: row.id, amount: row.amount || '', amount_usd: row.amount_usd || '', cashback: row.cashback || '' }); setShowEditModal(true); }} style={styles.linkBtn}>Edit</button>
-          <button onClick={() => { setDeleteId(row.id); setShowDeleteModal(true); }} style={{ ...styles.linkBtn, color: '#ef4444' }}>Delete</button>
-        </div>
-      )
+  const handleDelete = async (id) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'This recharge amount will be deleted!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#7c3aed',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, Delete',
+      cancelButtonText: 'Cancel',
+    });
+    if (result.isConfirmed) {
+      try {
+        await rechargeApi.delete({ del_id: id });
+        Swal.fire({ title: 'Deleted!', icon: 'success', confirmButtonColor: '#7c3aed', timer: 1500, showConfirmButton: false });
+        fetchData();
+      } catch (err) {
+        Swal.fire({ title: 'Error!', text: 'Failed to delete', icon: 'error', confirmButtonColor: '#7c3aed' });
+      }
     }
-  ];
+  };
 
-  const renderForm = (formData, setFormData, onSubmit, btnText) => (
-    <form onSubmit={onSubmit} style={{ padding: 20 }}>
-      <div style={{ marginBottom: 12 }}>
-        <label style={styles.label}>Amount (INR) *</label>
-        <input type="text" value={formData.amount} onChange={e => numbersOnly(e.target.value) && setFormData({ ...formData, amount: e.target.value })} required style={styles.input} placeholder="Amount" />
+  const renderPagination = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+    const totalPages = pagination.totalPages;
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (page > 3) pages.push('...');
+      const start = Math.max(2, page - 1);
+      const end = Math.min(totalPages - 1, page + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (page < totalPages - 2) pages.push('...');
+      pages.push(totalPages);
+    }
+    return (
+      <div className="cust-pagination">
+        <span className="cust-page-info">Showing {pagination.start} to {pagination.end} of {pagination.totalRecords}</span>
+        <div className="cust-page-btns">
+          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="cust-page-btn"><ChevronLeft size={14} /></button>
+          {pages.map((p, i) =>
+            p === '...' ? (
+              <span key={`dots-${i}`} className="cust-page-dots">...</span>
+            ) : (
+              <button key={p} onClick={() => setPage(p)} className={`cust-page-btn ${p === page ? 'active' : ''}`}>{p}</button>
+            )
+          )}
+          <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="cust-page-btn"><ChevronRight size={14} /></button>
+        </div>
       </div>
-      <div style={{ marginBottom: 12 }}>
-        <label style={styles.label}>Amount (USD) *</label>
-        <input type="text" value={formData.amount_usd} onChange={e => numbersOnly(e.target.value) && setFormData({ ...formData, amount_usd: e.target.value })} required style={styles.input} placeholder="Amount" />
-      </div>
-      <div style={{ marginBottom: 12 }}>
-        <label style={styles.label}>Cashback (in %)</label>
-        <input type="text" value={formData.cashback} onChange={e => numbersOnly(e.target.value) && setFormData({ ...formData, cashback: e.target.value })} style={styles.input} placeholder="Cashback" />
-      </div>
-      <button type="submit" style={styles.addBtn}>{btnText}</button>
-    </form>
-  );
+    );
+  };
 
   return (
     <div>
-      <DataTable title="Recharge Amount" columns={columns} data={data} pagination={pagination} onPageChange={setPage}
-        headerActions={<button onClick={() => { setForm({ amount: '', amount_usd: '', cashback: '' }); setShowAddModal(true); }} style={styles.addBtn}>Add Amount</button>} />
-
-      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Recharge Amount">
-        {renderForm(form, setForm, handleAdd, 'Add Recharge Amount')}
-      </Modal>
-
-      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Edit Recharge Amount">
-        {renderForm(editForm, setEditForm, handleEdit, 'Update Recharge Amount')}
-      </Modal>
-
-      <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} title="Delete Recharge Amount">
-        <div style={{ textAlign: 'center', padding: 20 }}>
-          <p style={{ fontSize: 18, fontWeight: 600 }}>Are you sure?</p>
-          <p style={{ color: '#6b7280', marginTop: 8 }}>This process cannot be undone.</p>
-          <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center', gap: 10 }}>
-            <button onClick={() => setShowDeleteModal(false)} style={{ ...styles.addBtn, background: '#6b7280' }}>Cancel</button>
-            <button onClick={handleDelete} style={{ ...styles.addBtn, background: '#ef4444' }}>Delete</button>
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <IndianRupee size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Recharge Amounts</h2>
+            {pagination && <div className="cust-count">{pagination.totalRecords} total</div>}
           </div>
         </div>
+        <div className="cust-topbar-right">
+          <button onClick={() => { setEditData(null); setForm({ amount: '', amount_usd: '', cashback: '' }); setShowModal(true); }} className="cust-btn cust-btn-primary">
+            <Plus size={15} /> Add Amount
+          </button>
+        </div>
+      </div>
+
+      <div className="cust-card">
+        {loading ? <Loader text="Loading recharge amounts..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Amount (INR)</th>
+                  <th>Amount (USD)</th>
+                  <th>Cashback</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length === 0 ? (
+                  <tr><td colSpan={5} className="cust-no-data">No recharge amounts found.</td></tr>
+                ) : data.map((row, i) => (
+                  <tr key={row.id}>
+                    <td>{(pagination?.start || 1) + i}</td>
+                    <td className="cust-name-cell">{row.amount ? `\u20B9${row.amount}` : '---'}</td>
+                    <td>{row.amount_usd ? `$${row.amount_usd}` : '---'}</td>
+                    <td>
+                      {row.cashback ? (
+                        <span className="cust-verify-badge verified">{row.cashback}%</span>
+                      ) : '---'}
+                    </td>
+                    <td>
+                      <div className="cust-actions">
+                        <button onClick={() => handleEdit(row)} className="cust-action-btn cust-action-edit" title="Edit"><Pencil size={15} /></button>
+                        <button onClick={() => handleDelete(row.id)} className="cust-action-btn cust-action-delete" title="Delete"><Trash2 size={15} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {renderPagination()}
+      </div>
+
+      {/* Add/Edit Modal */}
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editData ? 'Edit Recharge Amount' : 'Add Recharge Amount'}>
+        <form onSubmit={handleSubmit}>
+          <div className="cust-form-group">
+            <label>Amount (INR) *</label>
+            <input type="text" value={form.amount} onChange={e => numbersOnly(e.target.value) && setForm({ ...form, amount: e.target.value })} required placeholder="Enter INR amount" />
+          </div>
+          <div className="cust-form-group">
+            <label>Amount (USD) *</label>
+            <input type="text" value={form.amount_usd} onChange={e => numbersOnly(e.target.value) && setForm({ ...form, amount_usd: e.target.value })} required placeholder="Enter USD amount" />
+          </div>
+          <div className="cust-form-group">
+            <label>Cashback (in %)</label>
+            <input type="text" value={form.cashback} onChange={e => numbersOnly(e.target.value) && setForm({ ...form, cashback: e.target.value })} placeholder="Enter cashback percentage" />
+          </div>
+          <button type="submit" className="cust-btn cust-btn-primary cust-btn-full">
+            {editData ? 'Update' : 'Add'} Recharge Amount
+          </button>
+        </form>
       </Modal>
     </div>
   );
-};
-
-const styles = {
-  addBtn: { background: '#3b82f6', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
-  linkBtn: { background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: 500 },
-  label: { fontSize: 13, fontWeight: 500, display: 'block', marginBottom: 4 },
-  input: { width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }
 };
 
 export default Recharge;

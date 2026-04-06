@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { earningApi } from '../api/services';
+import Loader from '../components/Loader';
+import { Wallet, FileSpreadsheet, Search, X, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import moment from 'moment';
+import 'react-datepicker/dist/react-datepicker.css';
+import '../styles/Customers.css';
 
 const AdminEarnings = () => {
   const [data, setData] = useState([]);
@@ -9,8 +15,9 @@ const AdminEarnings = () => {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [orderType, setOrderType] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [fromDate, setFromDate] = useState(moment().toDate());
+  const [toDate, setToDate] = useState(moment().toDate());
+  const [dateApplied, setDateApplied] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -18,8 +25,8 @@ const AdminEarnings = () => {
       const params = { page };
       if (search) params.searchString = search;
       if (orderType) params.orderType = orderType;
-      if (fromDate) params.from_date = fromDate;
-      if (toDate) params.to_date = toDate;
+      if (dateApplied && fromDate) params.from_date = moment(fromDate).format('YYYY-MM-DD');
+      if (dateApplied && toDate) params.to_date = moment(toDate).format('YYYY-MM-DD');
       const res = await earningApi.adminEarnings(params);
       const d = res.data.data || res.data;
       setData(d.earnings || []);
@@ -31,7 +38,7 @@ const AdminEarnings = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, [page, orderType, fromDate, toDate]);
+  useEffect(() => { fetchData(); }, [page, orderType, dateApplied]);
 
   const handleSearch = () => { setPage(1); fetchData(); };
 
@@ -40,8 +47,8 @@ const AdminEarnings = () => {
       const params = {};
       if (search) params.searchString = search;
       if (orderType) params.orderType = orderType;
-      if (fromDate) params.from_date = fromDate;
-      if (toDate) params.to_date = toDate;
+      if (dateApplied && fromDate) params.from_date = moment(fromDate).format('YYYY-MM-DD');
+      if (dateApplied && toDate) params.to_date = moment(toDate).format('YYYY-MM-DD');
       const res = await earningApi.adminExportCsv(params);
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement('a');
@@ -55,108 +62,206 @@ const AdminEarnings = () => {
     }
   };
 
+  const handleDateSubmit = () => {
+    setDateApplied(true);
+    setPage(1);
+  };
+
+  const clearFilters = () => {
+    setSearch('');
+    setOrderType('');
+    setFromDate(moment().toDate());
+    setToDate(moment().toDate());
+    setDateApplied(false);
+    setPage(1);
+  };
+
   const formatDate = (d) => {
     if (!d) return '-';
     return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(1, page - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+    if (start > 1) { pages.push(1); if (start > 2) pages.push('dots-start'); }
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < totalPages) { if (end < totalPages - 1) pages.push('dots-end'); pages.push(totalPages); }
+    return (
+      <div className="cust-pagination">
+        <span className="cust-page-info">
+          Page {page} of {totalPages} ({totalRecords} total)
+        </span>
+        <div className="cust-page-btns">
+          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="cust-page-btn">
+            <ChevronLeft size={14} />
+          </button>
+          {pages.map((p, idx) =>
+            typeof p === 'string' ? (
+              <span key={p} className="cust-page-dots">...</span>
+            ) : (
+              <button key={p} onClick={() => setPage(p)} className={`cust-page-btn ${p === page ? 'active' : ''}`}>
+                {p}
+              </button>
+            )
+          )}
+          <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="cust-page-btn">
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Admin Earnings</h2>
-        <button onClick={handleExportCsv} style={btnStyle}>Export CSV</button>
+    <div>
+      {/* Top Bar */}
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <Wallet size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Admin Earnings</h2>
+            <div className="cust-count">{totalRecords} total records</div>
+          </div>
+        </div>
+        <div className="cust-topbar-right">
+          <button onClick={handleExportCsv} className="cust-btn cust-btn-success">
+            <FileSpreadsheet size={15} /> CSV
+          </button>
+        </div>
       </div>
 
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        <div>
-          <label style={labelStyle}>Search</label>
-          <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} placeholder="Search user/astrologer..." style={inputStyle} />
+      {/* Filters Bar */}
+      <div className="cust-filterbar">
+        <div className="cust-filter-group cust-filter-search-group">
+          <label className="cust-filter-label">Search</label>
+          <div className="cust-filter-search">
+            <Search size={14} className="cust-search-icon" />
+            <input
+              type="text"
+              placeholder="Search user/astrologer..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
+              className="cust-input cust-search-input"
+            />
+            {search && (
+              <button onClick={() => { setSearch(''); setPage(1); }} className="cust-search-clear">
+                <X size={13} />
+              </button>
+            )}
+          </div>
         </div>
-        <div>
-          <label style={labelStyle}>Order Type</label>
-          <select value={orderType} onChange={e => { setOrderType(e.target.value); setPage(1); }} style={inputStyle}>
+
+        <div className="cust-filter-group">
+          <label className="cust-filter-label">Order Type</label>
+          <select
+            value={orderType}
+            onChange={e => { setOrderType(e.target.value); setPage(1); }}
+            className="cust-input"
+          >
             <option value="">All</option>
             <option value="chat">Chat</option>
             <option value="call">Call</option>
             <option value="report">Report</option>
           </select>
         </div>
-        <div>
-          <label style={labelStyle}>From Date</label>
-          <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPage(1); }} style={inputStyle} />
-        </div>
-        <div>
-          <label style={labelStyle}>To Date</label>
-          <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPage(1); }} style={inputStyle} />
-        </div>
-        <button onClick={handleSearch} style={{ ...btnStyle, background: '#7c3aed' }}>Search</button>
-      </div>
 
-      {/* Table */}
-      <div style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f8f9fa' }}>
-              <th style={thStyle}>#</th>
-              <th style={thStyle}>Order Type</th>
-              <th style={thStyle}>User</th>
-              <th style={thStyle}>Astrologer</th>
-              <th style={thStyle}>Duration</th>
-              <th style={thStyle}>Total Amount</th>
-              <th style={thStyle}>Admin Earning</th>
-              <th style={thStyle}>Expert Earning</th>
-              <th style={thStyle}>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={9} style={{ textAlign: 'center', padding: 30, color: '#999' }}>Loading...</td></tr>
-            ) : data.length > 0 ? data.map((row, i) => (
-              <tr key={row.id || i}>
-                <td style={tdStyle}>{(page - 1) * 15 + i + 1}</td>
-                <td style={tdStyle}>
-                  <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: row.orderType === 'chat' ? '#dbeafe' : row.orderType === 'call' ? '#fef3c7' : '#e0e7ff', color: row.orderType === 'chat' ? '#1e40af' : row.orderType === 'call' ? '#92400e' : '#3730a3' }}>
-                    {row.orderType || '-'}
-                  </span>
-                </td>
-                <td style={tdStyle}>{row.UserName || '-'}</td>
-                <td style={tdStyle}>{row.astrologerName || '-'}</td>
-                <td style={tdStyle}>{row.totalMin ? `${row.totalMin} min` : '-'}</td>
-                <td style={tdStyle}>{row.totalPayable != null ? `₹${Number(row.totalPayable).toFixed(2)}` : '-'}</td>
-                <td style={{ ...tdStyle, color: '#16a34a', fontWeight: 600 }}>{row.adminearningAmount != null ? `₹${Number(row.adminearningAmount).toFixed(2)}` : '-'}</td>
-                <td style={tdStyle}>{row.totalPayable != null && row.adminearningAmount != null ? `₹${(Number(row.totalPayable) - Number(row.adminearningAmount)).toFixed(2)}` : '-'}</td>
-                <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{formatDate(row.updated_at || row.created_at)}</td>
-              </tr>
-            )) : (
-              <tr><td colSpan={9} style={{ textAlign: 'center', padding: 30, color: '#999' }}>No earnings data found.</td></tr>
+        <div className="cust-filter-date-row">
+          <div className="cust-filter-group">
+            <label className="cust-filter-label">From</label>
+            <div className="cust-datepicker-wrap">
+              <Calendar size={14} className="cust-datepicker-icon" />
+              <DatePicker
+                selected={fromDate}
+                onChange={date => { setFromDate(date); setDateApplied(false); }}
+                dateFormat="dd MMM yyyy"
+                className="cust-input cust-datepicker-input"
+                placeholderText="Select date"
+              />
+            </div>
+          </div>
+          <div className="cust-filter-group">
+            <label className="cust-filter-label">To</label>
+            <div className="cust-datepicker-wrap">
+              <Calendar size={14} className="cust-datepicker-icon" />
+              <DatePicker
+                selected={toDate}
+                onChange={date => { setToDate(date); setDateApplied(false); }}
+                dateFormat="dd MMM yyyy"
+                className="cust-input cust-datepicker-input"
+                placeholderText="Select date"
+              />
+            </div>
+          </div>
+          <div className="cust-filter-actions">
+            <button onClick={handleDateSubmit} className="cust-btn cust-btn-primary">
+              <Search size={13} /> Apply
+            </button>
+            {(search || dateApplied || orderType) && (
+              <button onClick={clearFilters} className="cust-btn cust-btn-danger">
+                <X size={13} /> Clear
+              </button>
             )}
-          </tbody>
-        </table>
+          </div>
+        </div>
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 16 }}>
-          <button disabled={page <= 1} onClick={() => setPage(page - 1)} style={{ ...pgBtn, opacity: page <= 1 ? 0.5 : 1 }}>Prev</button>
-          {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-            const p = page <= 3 ? i + 1 : page - 2 + i;
-            if (p > totalPages || p < 1) return null;
-            return <button key={p} onClick={() => setPage(p)} style={{ ...pgBtn, background: p === page ? '#7c3aed' : '#fff', color: p === page ? '#fff' : '#333' }}>{p}</button>;
-          })}
-          <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} style={{ ...pgBtn, opacity: page >= totalPages ? 0.5 : 1 }}>Next</button>
-        </div>
-      )}
-      <div style={{ textAlign: 'center', marginTop: 8, fontSize: 12, color: '#999' }}>Total Records: {totalRecords}</div>
+      {/* Card + Table */}
+      <div className="cust-card">
+        {loading ? <Loader text="Loading earnings..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Order Type</th>
+                  <th>User</th>
+                  <th>Astrologer</th>
+                  <th>Duration</th>
+                  <th>Total Amount</th>
+                  <th>Admin Earning</th>
+                  <th>Expert Earning</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length > 0 ? data.map((row, i) => (
+                  <tr key={row.id || i}>
+                    <td>{(page - 1) * 15 + i + 1}</td>
+                    <td>
+                      <span className={`cust-req-badge ${row.orderType === 'chat' ? 'blue' : 'purple'}`}>
+                        {row.orderType || '-'}
+                      </span>
+                    </td>
+                    <td className="cust-name-cell">{row.UserName || '-'}</td>
+                    <td className="cust-name-cell">{row.astrologerName || '-'}</td>
+                    <td>{row.totalMin ? `${row.totalMin} min` : '-'}</td>
+                    <td>{row.totalPayable != null ? `₹${Number(row.totalPayable).toFixed(2)}` : '-'}</td>
+                    <td>
+                      <span className="cust-verify-badge verified">
+                        {row.adminearningAmount != null ? `₹${Number(row.adminearningAmount).toFixed(2)}` : '-'}
+                      </span>
+                    </td>
+                    <td>{row.totalPayable != null && row.adminearningAmount != null ? `₹${(Number(row.totalPayable) - Number(row.adminearningAmount)).toFixed(2)}` : '-'}</td>
+                    <td className="cust-date-cell">{formatDate(row.updated_at || row.created_at)}</td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan={9} className="cust-no-data">No earnings data found.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {renderPagination()}
+      </div>
     </div>
   );
 };
-
-const thStyle = { padding: '10px 12px', textAlign: 'left', fontSize: 12, fontWeight: 600, borderBottom: '2px solid #e5e7eb', whiteSpace: 'nowrap' };
-const tdStyle = { padding: '8px 12px', borderBottom: '1px solid #f0f0f0', fontSize: 13 };
-const inputStyle = { padding: '7px 10px', border: '1px solid #ddd', borderRadius: 6, fontSize: 13, minWidth: 140 };
-const labelStyle = { display: 'block', fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 3 };
-const btnStyle = { padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 13 };
-const pgBtn = { padding: '6px 12px', border: '1px solid #ddd', borderRadius: 6, cursor: 'pointer', fontSize: 13 };
 
 export default AdminEarnings;

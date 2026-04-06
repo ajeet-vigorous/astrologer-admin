@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Modal from '../components/Modal';
-import FormInput from '../components/FormInput';
 import { courseApi } from '../api/services';
+import Loader from '../components/Loader';
+import { GraduationCap, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import Swal from 'sweetalert2';
+import '../styles/Customers.css';
+
+import getImageUrl from '../utils/getImageUrl';
 
 const CourseCategories = () => {
   const [data, setData] = useState([]);
@@ -9,17 +13,18 @@ const CourseCategories = () => {
   const [page, setPage] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [statusId, setStatusId] = useState(null);
   const [form, setForm] = useState({ name: '', image: '' });
   const [editForm, setEditForm] = useState({ filed_id: '', name: '', image: '' });
+  const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await courseApi.getCategories({ page });
       setData(res.data.categories || []);
       setPagination({ totalPages: res.data.totalPages, totalRecords: res.data.totalRecords, start: res.data.start, end: res.data.end, page: res.data.page });
     } catch (err) { console.error(err); }
+    setLoading(false);
   }, [page]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -56,12 +61,26 @@ const CourseCategories = () => {
     } catch (err) { console.error(err); }
   };
 
-  const handleStatus = async () => {
-    try {
-      await courseApi.categoryStatus({ status_id: statusId });
-      setShowStatusModal(false);
-      fetchData();
-    } catch (err) { console.error(err); }
+  const handleStatusToggle = async (id) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'You want to change the status?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#7c3aed',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, Change',
+      cancelButtonText: 'Cancel',
+    });
+    if (result.isConfirmed) {
+      try {
+        await courseApi.categoryStatus({ status_id: id });
+        Swal.fire({ title: 'Updated!', icon: 'success', confirmButtonColor: '#7c3aed', timer: 1500, showConfirmButton: false });
+        fetchData();
+      } catch (err) {
+        Swal.fire({ title: 'Error!', text: 'Failed to update status', icon: 'error', confirmButtonColor: '#7c3aed' });
+      }
+    }
   };
 
   const openEdit = (cat) => {
@@ -73,104 +92,184 @@ const CourseCategories = () => {
     if (!img) return '/build/assets/images/person.png';
     if (img.startsWith('http')) return img;
     if (img.startsWith('data:')) return img;
-    return '/' + img;
+    return getImageUrl(img);
+  };
+
+  const renderPagination = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+    const total = pagination.totalPages;
+    const pages = [];
+
+    if (total <= 7) {
+      for (let i = 1; i <= total; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (page > 3) pages.push('dots-start');
+      for (let i = Math.max(2, page - 1); i <= Math.min(total - 1, page + 1); i++) pages.push(i);
+      if (page < total - 2) pages.push('dots-end');
+      pages.push(total);
+    }
+
+    return (
+      <div className="cust-pagination">
+        <span className="cust-page-info">Showing {pagination.start} to {pagination.end} of {pagination.totalRecords}</span>
+        <div className="cust-page-btns">
+          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="cust-page-btn"><ChevronLeft size={14} /></button>
+          {pages.map((p, idx) =>
+            typeof p === 'string' ? (
+              <span key={p} className="cust-page-dots">...</span>
+            ) : (
+              <button key={idx} onClick={() => setPage(p)} className={`cust-page-btn ${p === page ? 'active' : ''}`}>{p}</button>
+            )
+          )}
+          <button onClick={() => setPage(Math.min(total, page + 1))} disabled={page >= total} className="cust-page-btn"><ChevronRight size={14} /></button>
+        </div>
+      </div>
+    );
   };
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 15, margin: '20px 0' }}>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#1e293b', margin: 0 }}>Course Categories</h2>
-        <button onClick={() => { setForm({ name: '', image: '' }); setShowAddModal(true); }} style={styles.addBtn}>Add Course Category</button>
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <GraduationCap size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Course Categories</h2>
+            {pagination && <div className="cust-count">{pagination.totalRecords} total</div>}
+          </div>
+        </div>
+        <div className="cust-topbar-right">
+          <button onClick={() => { setForm({ name: '', image: '' }); setShowAddModal(true); }} className="cust-btn cust-btn-primary">
+            <Plus size={15} /> Add Category
+          </button>
+        </div>
       </div>
 
-      {data.length > 0 ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 20 }}>
-          {data.map(cat => (
-            <div key={cat.id} style={styles.card}>
-              <div style={styles.cardImgWrap}>
-                <img src={getImgSrc(cat.image)} alt="" style={styles.cardImg} onError={(e) => { e.target.src = '/build/assets/images/person.png'; }} />
-                <div style={styles.cardOverlay}><span style={{ fontWeight: 600, fontSize: 15 }}>{cat.name}</span></div>
-              </div>
-              <div style={styles.cardActions}>
-                <button onClick={() => openEdit(cat)} style={styles.editBtn}>Edit</button>
-                <label style={styles.switchLabel}>
-                  <input type="checkbox" checked={!!cat.isActive} onChange={() => { setStatusId(cat.id); setShowStatusModal(true); }} />
-                  <span style={{ color: cat.isActive ? '#059669' : '#dc2626' }}>{cat.isActive ? 'Active' : 'Inactive'}</span>
-                </label>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div style={{ textAlign: 'center', padding: 60, background: '#fff', borderRadius: 10 }}><h3 style={{ color: '#9ca3af' }}>No Data Available</h3></div>
-      )}
-
-      {pagination && pagination.totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginTop: 20 }}>
-          <button disabled={page === 1} onClick={() => setPage(p => p - 1)} style={styles.pageBtn}>&lt;</button>
-          {Array.from({ length: pagination.totalPages }, (_, i) => (
-            <button key={i} onClick={() => setPage(i + 1)} style={{ ...styles.pageBtn, ...(page === i + 1 ? styles.pageBtnActive : {}) }}>{i + 1}</button>
-          ))}
-          <button disabled={page === pagination.totalPages} onClick={() => setPage(p => p + 1)} style={styles.pageBtn}>&gt;</button>
-        </div>
-      )}
+      <div className="cust-card">
+        {loading ? <Loader text="Loading course categories..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Image</th>
+                  <th>Name</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length === 0 ? (
+                  <tr><td colSpan={5} className="cust-no-data">No course categories found.</td></tr>
+                ) : data.map((cat, i) => (
+                  <tr key={cat.id}>
+                    <td>{(pagination?.start || 1) + i}</td>
+                    <td>
+                      <img
+                        src={getImgSrc(cat.image)}
+                        alt={cat.name}
+                        className="cust-avatar"
+                        onError={(e) => { e.target.src = '/build/assets/images/person.png'; }}
+                      />
+                    </td>
+                    <td className="cust-name-cell">{cat.name}</td>
+                    <td>
+                      <span
+                        onClick={() => handleStatusToggle(cat.id)}
+                        className={`cust-verify-badge ${cat.isActive ? 'verified' : 'unverified'}`}
+                      >
+                        {cat.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="cust-actions">
+                        <button onClick={() => openEdit(cat)} className="cust-action-btn cust-action-edit" title="Edit"><Pencil size={15} /></button>
+                        <button className="cust-action-btn cust-action-delete" title="Delete"><Trash2 size={15} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {renderPagination()}
+      </div>
 
       {/* Add Modal */}
-      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Course Category">
-        <form onSubmit={handleAdd}>
-          <FormInput label="Name" name="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Category Name" />
-          <div style={{ marginTop: 12 }}>
-            <label style={{ fontWeight: 500, display: 'block', marginBottom: 5 }}>Category Image</label>
-            <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, false)} required />
-            {form.image && <img src={form.image} alt="" style={{ width: 150, marginTop: 10, borderRadius: 6 }} />}
+      {showAddModal && (
+        <div className="cust-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="cust-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Add Course Category</h3>
+              <button className="cust-modal-close" onClick={() => setShowAddModal(false)}><X size={18} /></button>
+            </div>
+            <div className="cust-modal-body">
+              <form onSubmit={handleAdd}>
+                <div className="cust-form-group">
+                  <label>Category Name <span className="af-req">*</span></label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                    placeholder="Category Name"
+                  />
+                </div>
+                <div className="cust-form-group">
+                  <label>Category Image <span className="af-req">*</span></label>
+                  <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, false)} required />
+                  {form.image && <img src={form.image} alt="Preview" className="cust-img-preview" />}
+                </div>
+                <button type="submit" className="cust-btn cust-btn-primary cust-btn-full">Add Course Category</button>
+              </form>
+            </div>
           </div>
-          <div style={{ marginTop: 15 }}><button type="submit" style={styles.addBtn}>Add Course Category</button></div>
-        </form>
-      </Modal>
+        </div>
+      )}
 
       {/* Edit Modal */}
-      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Edit Course Category">
-        <form onSubmit={handleEdit}>
-          <FormInput label="Name" name="name" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required placeholder="Category Name" />
-          <div style={{ marginTop: 12 }}>
-            <label style={{ fontWeight: 500, display: 'block', marginBottom: 5 }}>Category Image</label>
-            {editForm.image && <img src={getImgSrc(editForm.image)} alt="" style={{ width: 150, marginBottom: 10, borderRadius: 6 }} onError={(e) => { e.target.style.display = 'none'; }} />}
-            <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, true)} />
-          </div>
-          <div style={{ marginTop: 15 }}><button type="submit" style={styles.addBtn}>Save</button></div>
-        </form>
-      </Modal>
-
-      {/* Status Confirmation Modal */}
-      {showStatusModal && (
-        <div style={styles.overlay} onClick={() => setShowStatusModal(false)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, textAlign: 'center' }}>Are You Sure?</h3>
-            <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 8 }}>You want to change the status?</p>
-            <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center', gap: 10 }}>
-              <button onClick={handleStatus} style={styles.addBtn}>Yes</button>
-              <button onClick={() => setShowStatusModal(false)} style={{ ...styles.addBtn, background: '#6b7280' }}>Cancel</button>
+      {showEditModal && (
+        <div className="cust-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="cust-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Edit Course Category</h3>
+              <button className="cust-modal-close" onClick={() => setShowEditModal(false)}><X size={18} /></button>
+            </div>
+            <div className="cust-modal-body">
+              <form onSubmit={handleEdit}>
+                <div className="cust-form-group">
+                  <label>Category Name <span className="af-req">*</span></label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    required
+                    placeholder="Category Name"
+                  />
+                </div>
+                <div className="cust-form-group">
+                  <label>Category Image</label>
+                  {editForm.image && (
+                    <img
+                      src={getImgSrc(editForm.image)}
+                      alt="Preview"
+                      className="cust-img-preview"
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  )}
+                  <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, true)} />
+                </div>
+                <button type="submit" className="cust-btn cust-btn-primary cust-btn-full">Save</button>
+              </form>
             </div>
           </div>
         </div>
       )}
     </div>
   );
-};
-
-const styles = {
-  addBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  card: { border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
-  cardImgWrap: { position: 'relative', height: 170, overflow: 'hidden' },
-  cardImg: { width: '100%', height: '100%', objectFit: 'cover' },
-  cardOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 15px', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', color: '#fff' },
-  cardActions: { display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '10px 15px', borderTop: '1px solid #e5e7eb', gap: 20 },
-  editBtn: { background: 'none', border: 'none', color: '#7c3aed', cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  switchLabel: { display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, fontWeight: 500 },
-  pageBtn: { padding: '6px 12px', border: '1px solid #d1d5db', borderRadius: 4, cursor: 'pointer', background: '#fff', fontSize: 13 },
-  pageBtnActive: { background: '#7c3aed', color: '#fff', borderColor: '#7c3aed' },
-  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 },
-  modal: { background: '#fff', borderRadius: 12, padding: 30, maxWidth: 400, width: '90%' }
 };
 
 export default CourseCategories;

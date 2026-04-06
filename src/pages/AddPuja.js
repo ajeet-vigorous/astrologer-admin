@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { HandHeart, X, Plus, Loader2, Image } from 'lucide-react';
+import Swal from 'sweetalert2';
 import { pujaApi } from '../api/services';
+import '../styles/AstrologerForm.css';
 
 const AddPuja = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = !!id;
+  const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
     title: '', subtitle: '', category_id: '', sub_category_id: '', place: '',
@@ -101,135 +105,160 @@ const AddPuja = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const payload = { ...form };
       if (isEdit) {
         const res = await pujaApi.update(id, payload);
-        if (res.data.error) { alert(JSON.stringify(res.data.error)); return; }
+        if (res.data.error) { Swal.fire('Error', JSON.stringify(res.data.error), 'error'); setLoading(false); return; }
+        Swal.fire('Success', 'Puja updated successfully!', 'success');
       } else {
         const res = await pujaApi.store(payload);
-        if (res.data.error) { alert(JSON.stringify(res.data.error)); return; }
+        if (res.data.error) { Swal.fire('Error', JSON.stringify(res.data.error), 'error'); setLoading(false); return; }
+        Swal.fire('Success', 'Puja added successfully!', 'success');
       }
       navigate('/admin/puja-list');
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); Swal.fire('Error', 'Something went wrong', 'error'); }
+    setLoading(false);
   };
 
   const filteredSubCats = subCategories.filter(sc => sc.category_id === parseInt(form.category_id));
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      <div style={styles.card}>
-        <div style={styles.cardHeader}><h2 style={{ margin: 0 }}>{isEdit ? 'Edit' : 'Add'} Puja</h2></div>
-        <form onSubmit={handleSubmit} style={{ padding: 20 }}>
-          <div style={styles.grid2}>
-            <div>
-              <label style={styles.label}>Title <span style={{ color: 'red' }}>*</span></label>
-              <input name="title" value={form.title} onChange={handleChange} style={styles.input} required placeholder="Enter title" />
-            </div>
-            <div>
-              <label style={styles.label}>Subtitle</label>
-              <input name="subtitle" value={form.subtitle} onChange={handleChange} style={styles.input} placeholder="Enter subtitle" />
-            </div>
-          </div>
+    <div className="af-page">
+      <div className="af-header">
+        <HandHeart size={22} color="#7c3aed" />
+        <h2 className="af-title">{isEdit ? 'Edit' : 'Add'} Puja</h2>
+      </div>
 
-          <div style={{ ...styles.grid2, marginTop: 15 }}>
-            <div>
-              <label style={styles.label}>Start Date Time</label>
-              <input type="datetime-local" name="puja_start_datetime" value={form.puja_start_datetime} onChange={handleChange} style={styles.input} />
+      <div className="af-card">
+        <form onSubmit={handleSubmit}>
+          <div className="af-grid">
+            {/* Title */}
+            <div className="af-field">
+              <label className="af-label">Title <span className="af-req">*</span></label>
+              <input className="af-input" name="title" value={form.title} onChange={handleChange} required placeholder="Enter title" />
             </div>
-            <div>
-              <label style={styles.label}>Puja Duration (minutes)</label>
-              <input name="puja_duration" value={form.puja_duration} onChange={handleChange} style={styles.input} placeholder="120" />
-            </div>
-          </div>
 
-          <div style={{ ...styles.grid3, marginTop: 15 }}>
-            <div>
-              <label style={styles.label}>Category <span style={{ color: 'red' }}>*</span></label>
-              <select name="category_id" value={form.category_id} onChange={handleChange} style={styles.input} required>
+            {/* Subtitle */}
+            <div className="af-field">
+              <label className="af-label">Subtitle</label>
+              <input className="af-input" name="subtitle" value={form.subtitle} onChange={handleChange} placeholder="Enter subtitle" />
+            </div>
+
+            {/* Start Date Time */}
+            <div className="af-field">
+              <label className="af-label">Start Date Time</label>
+              <input className="af-input" type="datetime-local" name="puja_start_datetime" value={form.puja_start_datetime} onChange={handleChange} />
+            </div>
+
+            {/* Puja Duration */}
+            <div className="af-field">
+              <label className="af-label">Puja Duration (minutes)</label>
+              <input className="af-input" name="puja_duration" value={form.puja_duration} onChange={handleChange} placeholder="120" />
+            </div>
+
+            {/* Category */}
+            <div className="af-field">
+              <label className="af-label">Category <span className="af-req">*</span></label>
+              <select className="af-select" name="category_id" value={form.category_id} onChange={handleChange} required>
                 <option value="">Select Category</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
-            <div>
-              <label style={styles.label}>Place <span style={{ color: 'red' }}>*</span></label>
-              <input name="place" value={form.place} onChange={handleChange} style={styles.input} required placeholder="Enter place" />
+
+            {/* Place */}
+            <div className="af-field">
+              <label className="af-label">Place <span className="af-req">*</span></label>
+              <input className="af-input" name="place" value={form.place} onChange={handleChange} required placeholder="Enter place" />
             </div>
-            <div>
-              <label style={styles.label}>Select Package <span style={{ color: 'red' }}>*</span></label>
-              <select multiple value={form.package_id.map(String)} onChange={handlePackageSelect} style={{ ...styles.input, height: 80 }} required>
+
+            {/* Package */}
+            <div className="af-field af-full">
+              <label className="af-label">Select Package <span className="af-req">*</span></label>
+              <select className="af-select" multiple value={form.package_id.map(String)} onChange={handlePackageSelect} required>
                 {packages.map(p => <option key={p.id} value={p.id}>{p.title} - {p.package_price}</option>)}
               </select>
             </div>
-          </div>
 
-          {filteredSubCats.length > 0 && (
-            <div style={{ marginTop: 15 }}>
-              <label style={styles.label}>Subcategory</label>
-              <select name="sub_category_id" value={form.sub_category_id} onChange={handleChange} style={styles.input}>
-                <option value="">Select Subcategory</option>
-                {filteredSubCats.map(sc => <option key={sc.id} value={sc.id}>{sc.name}</option>)}
-              </select>
+            {/* Subcategory (conditional) */}
+            {filteredSubCats.length > 0 && (
+              <div className="af-field af-full">
+                <label className="af-label">Subcategory</label>
+                <select className="af-select" name="sub_category_id" value={form.sub_category_id} onChange={handleChange}>
+                  <option value="">Select Subcategory</option>
+                  {filteredSubCats.map(sc => <option key={sc.id} value={sc.id}>{sc.name}</option>)}
+                </select>
+              </div>
+            )}
+
+            {/* About Puja */}
+            <div className="af-field af-full">
+              <label className="af-label">About Puja</label>
+              <textarea className="af-textarea" name="description" value={form.description} onChange={handleChange} placeholder="Enter description" />
             </div>
-          )}
 
-          <div style={{ marginTop: 15 }}>
-            <label style={styles.label}>About Puja</label>
-            <textarea name="description" value={form.description} onChange={handleChange} style={{ ...styles.input, minHeight: 100 }} placeholder="Enter description" />
-          </div>
-
-          <div style={{ border: '1px solid #d1d5db', borderRadius: 8, padding: 15, marginTop: 15 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>Puja Benefits</h3>
-              <button type="button" onClick={addBenefit} style={{ ...styles.addBtn, padding: '5px 15px', fontSize: 13 }}>+ Add Benefit</button>
+            {/* Benefits Section */}
+            <div className="af-full">
+              <div className="af-section-title">
+                Puja Benefits
+                <button type="button" className="af-slot-add" onClick={addBenefit}><Plus size={13} /> Add Benefit</button>
+              </div>
+              <div className="af-grid">
+                {form.benefit_title.map((_, idx) => (
+                  <div key={idx} className="af-field">
+                    <div className="ad-review-card">
+                      <div className="ad-review-body">
+                        <div className="ad-review-top">
+                          <span className="ad-review-name">Benefit {idx + 1}</span>
+                          <button type="button" className="af-slot-remove" onClick={() => removeBenefit(idx)}>
+                            <X size={14} />
+                          </button>
+                        </div>
+                        <input className="af-input" value={form.benefit_title[idx]} onChange={(e) => updateBenefit(idx, 'benefit_title', e.target.value)} placeholder="Enter benefit title" />
+                        <textarea className="af-textarea" value={form.benefit_description[idx]} onChange={(e) => updateBenefit(idx, 'benefit_description', e.target.value)} placeholder="Enter benefit description" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginTop: 10 }}>
-              {form.benefit_title.map((_, idx) => (
-                <div key={idx} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, position: 'relative' }}>
-                  <h4 style={{ margin: '0 0 8px' }}>Benefit</h4>
-                  <input value={form.benefit_title[idx]} onChange={(e) => updateBenefit(idx, 'benefit_title', e.target.value)}
-                    style={{ ...styles.input, marginBottom: 8 }} placeholder="Enter benefit title" />
-                  <textarea value={form.benefit_description[idx]} onChange={(e) => updateBenefit(idx, 'benefit_description', e.target.value)}
-                    style={styles.input} placeholder="Enter benefit description" />
-                  <button type="button" onClick={() => removeBenefit(idx)}
-                    style={{ position: 'absolute', top: -8, right: -8, background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer', fontSize: 14 }}>x</button>
+
+            {/* Image Upload */}
+            <div className="af-field af-full">
+              <label className="af-label"><Image size={14} /> Upload Images</label>
+              <div className="af-img-upload">
+                <input className="af-input" type="file" multiple accept="image/*" onChange={handleImages} />
+              </div>
+              {imagePreview.length > 0 && (
+                <div className="af-grid">
+                  {imagePreview.map((img, idx) => (
+                    <div key={idx} className="af-field">
+                      <div className="ad-review-card">
+                        <img className="af-img-preview" src={img} alt="" onError={(e) => { e.target.style.display = 'none'; }} />
+                        <button type="button" className="af-slot-remove" onClick={() => removeImage(idx)}>
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
-          <div style={{ marginTop: 15 }}>
-            <label style={styles.label}>Upload Images</label>
-            <input type="file" multiple accept="image/*" onChange={handleImages} />
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 10 }}>
-              {imagePreview.map((img, idx) => (
-                <div key={idx} style={{ position: 'relative', width: 120, height: 120 }}>
-                  <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }}
-                    onError={(e) => { e.target.style.display = 'none'; }} />
-                  <button type="button" onClick={() => removeImage(idx)}
-                    style={{ position: 'absolute', top: -5, right: -5, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: 12 }}>x</button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ marginTop: 20 }}>
-            <button type="submit" style={styles.addBtn}>{isEdit ? 'Update' : 'Submit'}</button>
+          {/* Footer */}
+          <div className="af-footer">
+            <button type="button" className="af-btn-cancel" onClick={() => navigate('/admin/puja-list')}>Cancel</button>
+            <button type="submit" className="af-btn-submit" disabled={loading}>
+              {loading ? <Loader2 size={16} className="spin" /> : null}
+              {isEdit ? 'Update' : 'Submit'}
+            </button>
           </div>
         </form>
       </div>
     </div>
   );
-};
-
-const styles = {
-  card: { background: '#fff', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' },
-  cardHeader: { padding: '15px 20px', borderBottom: '1px solid #e5e7eb' },
-  label: { display: 'block', fontWeight: 500, marginBottom: 5, fontSize: 14 },
-  input: { width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' },
-  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 },
-  grid3: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 15 },
-  addBtn: { background: '#3b82f6', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }
 };
 
 export default AddPuja;

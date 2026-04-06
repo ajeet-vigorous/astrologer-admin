@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { astroMallApi } from '../api/services';
+import Loader from '../components/Loader';
+import Swal from 'sweetalert2';
+import { ShoppingBag, Plus, Pencil, Trash2, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import '../styles/Customers.css';
+
+import getImageUrl from '../utils/getImageUrl';
 
 const AstroMallCategories = () => {
   const [data, setData] = useState([]);
@@ -22,10 +28,6 @@ const AstroMallCategories = () => {
   const [editImage, setEditImage] = useState(null);
   const [editPreview, setEditPreview] = useState(null);
   const [editCurrentImage, setEditCurrentImage] = useState(null);
-
-  // Status modal
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [statusItem, setStatusItem] = useState(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -124,21 +126,35 @@ const AstroMallCategories = () => {
     }
   };
 
-  // Status toggle handlers
-  const openStatusModal = (item) => {
-    setStatusItem(item);
-    setShowStatusModal(true);
+  // Status toggle with SweetAlert2
+  const handleStatusToggle = (item) => {
+    const isActive = item.isActive === 1 || item.isActive === true;
+    Swal.fire({
+      title: 'Are You Sure?',
+      text: `You want ${isActive ? 'Inactive' : 'Active'}!`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#7c3aed',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes',
+      cancelButtonText: 'Cancel'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await astroMallApi.categoryStatus({ status_id: item.id });
+          fetchData();
+        } catch (err) {
+          console.error('Error toggling status:', err);
+        }
+      }
+    });
   };
 
-  const handleStatusConfirm = async () => {
-    if (!statusItem) return;
-    try {
-      await astroMallApi.categoryStatus({ status_id: statusItem.id });
-      setShowStatusModal(false);
-      setStatusItem(null);
-      fetchData();
-    } catch (err) {
-      console.error('Error toggling status:', err);
+  const handleDelete = async (id) => {
+    const result = await Swal.fire({ title: 'Are you sure?', text: 'This category will be deleted!', icon: 'warning', showCancelButton: true, confirmButtonColor: '#7c3aed', cancelButtonColor: '#64748b', confirmButtonText: 'Yes, Delete' });
+    if (result.isConfirmed) {
+      try { await astroMallApi.deleteCategory({ del_id: id }); Swal.fire({ title: 'Deleted!', icon: 'success', confirmButtonColor: '#7c3aed', timer: 1500, showConfirmButton: false }); fetchData(); }
+      catch (e) { Swal.fire({ title: 'Error!', text: 'Failed to delete', icon: 'error', confirmButtonColor: '#7c3aed' }); }
     }
   };
 
@@ -146,302 +162,228 @@ const AstroMallCategories = () => {
     const img = item.categoryImage || item.image;
     if (!img) return null;
     if (img.startsWith('http')) return img;
-    return '/' + img;
+    return getImageUrl(img);
   };
 
-  const totalPages = pagination?.totalPages || 0;
+  const renderPagination = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+    const pages = [];
+    for (let i = 1; i <= Math.min(pagination.totalPages, 15); i++) pages.push(i);
+    return (
+      <div className="cust-pagination">
+        <span className="cust-page-info">
+          Showing {pagination.start} to {pagination.end} of {pagination.totalRecords} entries
+        </span>
+        <div className="cust-page-btns">
+          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="cust-page-btn">
+            <ChevronLeft size={14} />
+          </button>
+          {pages.map(p => (
+            <button key={p} onClick={() => setPage(p)} className={`cust-page-btn ${p === page ? 'active' : ''}`}>
+              {p}
+            </button>
+          ))}
+          {pagination.totalPages > 15 && <span className="cust-page-dots">...</span>}
+          <button onClick={() => setPage(Math.min(pagination.totalPages, page + 1))} disabled={page >= pagination.totalPages} className="cust-page-btn">
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div style={styles.container}>
-      {/* Header */}
-      <div style={styles.headerRow}>
-        <h2 style={styles.title}>Product Categories</h2>
-        <button onClick={openAddModal} style={styles.addBtn}>Add Product Category</button>
-      </div>
-
-      {/* Search */}
-      <div style={styles.searchRow}>
-        <input
-          type="text"
-          placeholder="Search..."
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          onKeyDown={handleSearchKeyDown}
-          style={styles.searchInput}
-        />
-        <button onClick={handleSearch} style={styles.searchBtn}>Search</button>
-      </div>
-
-      {/* Card Grid */}
-      {loading ? (
-        <div style={styles.noData}>Loading...</div>
-      ) : data.length === 0 ? (
-        <div style={styles.noData}>No Data Available</div>
-      ) : (
-        <div style={styles.cardGrid}>
-          {data.map((item) => {
-            const imgSrc = getImageSrc(item);
-            const isActive = item.isActive === 1 || item.isActive === true;
-            return (
-              <div key={item.id} style={styles.card}>
-                {/* Image area with gradient overlay */}
-                <div style={styles.cardImageWrap}>
-                  {imgSrc ? (
-                    <img
-                      src={imgSrc}
-                      alt={item.name}
-                      style={styles.cardImage}
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                  ) : (
-                    <div style={styles.cardImagePlaceholder}>No Image</div>
-                  )}
-                  <div style={styles.gradientOverlay}></div>
-                  <div style={styles.cardNameOverlay}>{item.name}</div>
-                </div>
-                {/* Footer */}
-                <div style={styles.cardFooter}>
-                  <span
-                    onClick={() => openEditModal(item)}
-                    style={styles.editLink}
-                  >
-                    Edit
-                  </span>
-                  {/* Toggle switch */}
-                  <label style={styles.switchLabel}>
-                    <div
-                      onClick={() => openStatusModal(item)}
-                      style={{
-                        ...styles.switchTrack,
-                        background: isActive ? '#10b981' : '#d1d5db'
-                      }}
-                    >
-                      <div style={{
-                        ...styles.switchThumb,
-                        transform: isActive ? 'translateX(20px)' : 'translateX(0)'
-                      }}></div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Pagination */}
-      {pagination && pagination.totalRecords > 0 && (
-        <div style={styles.pagination}>
-          <span style={styles.pageInfo}>
-            Showing {pagination.start} to {pagination.end} of {pagination.totalRecords} entries
-          </span>
-          <div style={styles.pageButtons}>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i + 1}
-                onClick={() => setPage(i + 1)}
-                style={{
-                  ...styles.pageBtn,
-                  background: pagination.page === i + 1 ? '#7c3aed' : '#fff',
-                  color: pagination.page === i + 1 ? '#fff' : '#374151',
-                  border: pagination.page === i + 1 ? '1px solid #7c3aed' : '1px solid #d1d5db'
-                }}
-              >
-                {i + 1}
-              </button>
-            ))}
+    <div>
+      {/* Top Bar */}
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <ShoppingBag size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Product Categories</h2>
+            {pagination && <div className="cust-count">{pagination.totalRecords} total</div>}
           </div>
         </div>
-      )}
+        <div className="cust-topbar-right">
+          <button onClick={openAddModal} className="cust-btn cust-btn-primary">
+            <Plus size={15} /> Add Category
+          </button>
+        </div>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="cust-filterbar">
+        <div className="cust-filter-group cust-filter-search-group">
+          <label className="cust-filter-label">Search</label>
+          <div className="cust-filter-search">
+            <Search size={14} className="cust-search-icon" />
+            <input
+              type="text"
+              placeholder="Search categories..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              className="cust-input cust-search-input"
+            />
+            {searchInput && (
+              <button onClick={() => { setSearchInput(''); setSearch(''); setPage(1); }} className="cust-search-clear">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="cust-filter-actions">
+          <button onClick={handleSearch} className="cust-btn cust-btn-primary">
+            <Search size={13} /> Search
+          </button>
+        </div>
+      </div>
+
+      <div className="cust-card">
+        {/* Card Grid */}
+        {loading ? (
+          <Loader text="Loading categories..." />
+        ) : data.length === 0 ? (
+          <div className="cust-no-data">No Data Available</div>
+        ) : (
+          <div className="mall-card-grid">
+            {data.map((item) => {
+              const imgSrc = getImageSrc(item);
+              const isActive = item.isActive === 1 || item.isActive === true;
+              return (
+                <div key={item.id} style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                  {/* Image area with gradient overlay */}
+                  <div style={{ position: 'relative', width: '100%', height: 160, overflow: 'hidden', background: '#e5e7eb' }}>
+                    {imgSrc ? (
+                      <img
+                        src={imgSrc}
+                        alt={item.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: 14 }}>No Image</div>
+                    )}
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 70, background: 'linear-gradient(transparent, rgba(0,0,0,0.7))' }} />
+                    <div style={{ position: 'absolute', bottom: 10, left: 12, right: 12, color: '#fff', fontWeight: 600, fontSize: 15, textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>{item.name}</div>
+                  </div>
+                  {/* Footer */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderTop: '1px solid #f3f4f6' }}>
+                    <button onClick={() => openEditModal(item)} className="cust-action-btn cust-action-edit" title="Edit">
+                      <Pencil size={15} />
+                    </button>
+                    <button onClick={() => handleDelete(item.id)} className="cust-action-btn cust-action-delete" title="Delete">
+                      <Trash2 size={15} />
+                    </button>
+                    <div className="cust-toggle-wrap">
+                      <div className={`cust-toggle ${isActive ? 'on' : ''}`} onClick={() => handleStatusToggle(item)}>
+                        <div className="cust-toggle-knob" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {renderPagination()}
+      </div>
 
       {/* Add Category Modal */}
       {showAddModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowAddModal(false)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <h3 style={{ margin: 0 }}>Add Product Category</h3>
-              <button onClick={() => setShowAddModal(false)} style={styles.modalClose}>&times;</button>
+        <div className="cust-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="cust-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Add Product Category</h3>
+              <button onClick={() => setShowAddModal(false)} className="cust-modal-close"><X size={20} /></button>
             </div>
-            <div style={styles.modalBody}>
-              <form onSubmit={handleAddSubmit}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Name <span style={{ color: 'red' }}>*</span></label>
-                  <input
-                    type="text"
-                    value={addName}
-                    onChange={(e) => setAddName(e.target.value)}
-                    style={styles.input}
-                    placeholder="Enter category name"
-                    required
-                  />
+            <form onSubmit={handleAddSubmit} className="cust-modal-body">
+              <div className="cust-form-group">
+                <label>Name <span style={{ color: 'red' }}>*</span></label>
+                <input
+                  type="text"
+                  value={addName}
+                  onChange={(e) => setAddName(e.target.value)}
+                  placeholder="Enter category name"
+                  required
+                />
+              </div>
+              <div className="cust-form-group">
+                <label>Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAddImageChange}
+                />
+              </div>
+              {addPreview && (
+                <div className="cust-form-group">
+                  <img src={addPreview} alt="Preview" className="cust-img-preview" />
                 </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Image</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAddImageChange}
-                    style={styles.input}
-                  />
-                </div>
-                {addPreview && (
-                  <div style={styles.formGroup}>
-                    <img src={addPreview} alt="Preview" style={styles.previewImage} />
-                  </div>
-                )}
-                <div style={styles.modalActions}>
-                  <button type="submit" style={styles.submitBtn}>Add</button>
-                  <button type="button" onClick={() => setShowAddModal(false)} style={styles.cancelBtn}>Cancel</button>
-                </div>
-              </form>
-            </div>
+              )}
+              <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+                <button type="submit" className="cust-btn cust-btn-primary cust-btn-full">Add</button>
+                <button type="button" onClick={() => setShowAddModal(false)} className="cust-btn cust-btn-ghost cust-btn-full">Cancel</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
       {/* Edit Category Modal */}
       {showEditModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowEditModal(false)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <h3 style={{ margin: 0 }}>Edit Product Category</h3>
-              <button onClick={() => setShowEditModal(false)} style={styles.modalClose}>&times;</button>
+        <div className="cust-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="cust-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Edit Product Category</h3>
+              <button onClick={() => setShowEditModal(false)} className="cust-modal-close"><X size={20} /></button>
             </div>
-            <div style={styles.modalBody}>
-              <form onSubmit={handleEditSubmit}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Name <span style={{ color: 'red' }}>*</span></label>
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    style={styles.input}
-                    placeholder="Enter category name"
-                    required
-                  />
-                </div>
-                {editCurrentImage && !editPreview && (
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Current Image</label>
-                    <img
-                      src={editCurrentImage.startsWith('http') ? editCurrentImage : '/' + editCurrentImage}
-                      alt="Current"
-                      style={styles.previewImage}
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                  </div>
-                )}
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Image</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleEditImageChange}
-                    style={styles.input}
-                  />
-                </div>
-                {editPreview && (
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>New Image Preview</label>
-                    <img src={editPreview} alt="Preview" style={styles.previewImage} />
-                  </div>
-                )}
-                <div style={styles.modalActions}>
-                  <button type="submit" style={styles.submitBtn}>Update</button>
-                  <button type="button" onClick={() => setShowEditModal(false)} style={styles.cancelBtn}>Cancel</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Status Toggle Confirmation Modal */}
-      {showStatusModal && statusItem && (
-        <div style={styles.modalOverlay} onClick={() => setShowStatusModal(false)}>
-          <div style={styles.statusModalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.statusModalBody}>
-              <div style={styles.statusIcon}>!</div>
-              <h3 style={{ margin: '10px 0 5px', fontSize: 20 }}>Are You Sure?</h3>
-              <p style={{ color: '#6b7280', margin: '5px 0 20px' }}>
-                You want {(statusItem.isActive === 1 || statusItem.isActive === true) ? 'Inactive' : 'Active'}!
-              </p>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 10 }}>
-                <button onClick={handleStatusConfirm} style={styles.yesBtn}>Yes</button>
-                <button onClick={() => setShowStatusModal(false)} style={styles.cancelStatusBtn}>Cancel</button>
+            <form onSubmit={handleEditSubmit} className="cust-modal-body">
+              <div className="cust-form-group">
+                <label>Name <span style={{ color: 'red' }}>*</span></label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Enter category name"
+                  required
+                />
               </div>
-            </div>
+              {editCurrentImage && !editPreview && (
+                <div className="cust-form-group">
+                  <label>Current Image</label>
+                  <img
+                    src={editCurrentImage.startsWith('http') ? editCurrentImage : '/' + editCurrentImage}
+                    alt="Current"
+                    className="cust-img-preview"
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                </div>
+              )}
+              <div className="cust-form-group">
+                <label>Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleEditImageChange}
+                />
+              </div>
+              {editPreview && (
+                <div className="cust-form-group">
+                  <label>New Image Preview</label>
+                  <img src={editPreview} alt="Preview" className="cust-img-preview" />
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+                <button type="submit" className="cust-btn cust-btn-primary cust-btn-full">Update</button>
+                <button type="button" onClick={() => setShowEditModal(false)} className="cust-btn cust-btn-ghost cust-btn-full">Cancel</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
     </div>
   );
 };
-
-const styles = {
-  container: { padding: 0 },
-  headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 10 },
-  title: { margin: 0, fontSize: 22, fontWeight: 600, color: '#1f2937' },
-  addBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  searchRow: { display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' },
-  searchInput: { flex: 1, minWidth: 200, padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' },
-  searchBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  cardGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 },
-  card: { background: '#fff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', transition: 'box-shadow 0.2s' },
-  cardImageWrap: { position: 'relative', width: '100%', height: 160, overflow: 'hidden', background: '#e5e7eb' },
-  cardImage: { width: '100%', height: '100%', objectFit: 'cover' },
-  cardImagePlaceholder: { width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: 14 },
-  gradientOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 70, background: 'linear-gradient(transparent, rgba(0,0,0,0.7))' },
-  cardNameOverlay: { position: 'absolute', bottom: 10, left: 12, right: 12, color: '#fff', fontWeight: 600, fontSize: 15, textShadow: '0 1px 3px rgba(0,0,0,0.5)' },
-  cardFooter: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderTop: '1px solid #f3f4f6' },
-  editLink: { color: '#7c3aed', cursor: 'pointer', fontWeight: 500, fontSize: 14 },
-  switchLabel: { cursor: 'pointer' },
-  switchTrack: { width: 44, height: 24, borderRadius: 12, position: 'relative', cursor: 'pointer', transition: 'background 0.2s' },
-  switchThumb: { width: 20, height: 20, borderRadius: '50%', background: '#fff', position: 'absolute', top: 2, left: 2, transition: 'transform 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' },
-  noData: { textAlign: 'center', padding: 60, color: '#9ca3af', fontSize: 16, background: '#fff', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' },
-  pagination: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, flexWrap: 'wrap', gap: 10 },
-  pageInfo: { fontSize: 14, color: '#6b7280' },
-  pageButtons: { display: 'flex', gap: 6 },
-  pageBtn: { padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 14, fontWeight: 500 },
-
-  // Modal styles
-  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modalContent: { background: '#fff', borderRadius: 10, width: '90%', maxWidth: 500, maxHeight: '90vh', overflow: 'auto' },
-  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', borderBottom: '1px solid #e5e7eb' },
-  modalClose: { background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#6b7280', padding: '0 5px' },
-  modalBody: { padding: 20 },
-  modalActions: { display: 'flex', gap: 10, marginTop: 20 },
-  formGroup: { marginBottom: 15 },
-  label: { display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 14, color: '#374151' },
-  input: { width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' },
-  previewImage: { width: 100, height: 100, objectFit: 'cover', borderRadius: 8, border: '1px solid #e5e7eb' },
-  submitBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  cancelBtn: { background: '#6b7280', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
-
-  // Status modal
-  statusModalContent: { background: '#fff', borderRadius: 10, width: '90%', maxWidth: 400, overflow: 'hidden' },
-  statusModalBody: { textAlign: 'center', padding: '30px 20px' },
-  statusIcon: { width: 60, height: 60, borderRadius: '50%', background: '#fef3c7', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 700 },
-  yesBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '10px 30px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  cancelStatusBtn: { background: '#6b7280', color: '#fff', border: 'none', padding: '10px 30px', borderRadius: 6, cursor: 'pointer', fontSize: 14 }
-};
-
-// Responsive override via media query in a style tag
-const styleTag = document.createElement('style');
-styleTag.textContent = `
-  @media (max-width: 1200px) {
-    .astromall-cat-grid { grid-template-columns: repeat(3, 1fr) !important; }
-  }
-  @media (max-width: 900px) {
-    .astromall-cat-grid { grid-template-columns: repeat(2, 1fr) !important; }
-  }
-  @media (max-width: 600px) {
-    .astromall-cat-grid { grid-template-columns: 1fr !important; }
-  }
-`;
-if (!document.getElementById('astromall-cat-responsive')) {
-  styleTag.id = 'astromall-cat-responsive';
-  document.head.appendChild(styleTag);
-}
 
 export default AstroMallCategories;

@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { HandHeart, Loader2, ArrowLeft } from 'lucide-react';
 import { pujaApi } from '../api/services';
+import '../styles/CustomerDetail.css';
+
+import getImgSrc from '../utils/getImageUrl';
 
 const ViewPuja = () => {
   const { id } = useParams();
@@ -23,87 +27,146 @@ const ViewPuja = () => {
     loadData();
   }, [id]);
 
-  if (!puja) return <div>Loading...</div>;
+  if (!puja) return (
+    <div className="cd-page">
+      <div className="cd-empty">
+        <Loader2 size={28} className="spin" color="#7c3aed" />
+        <p>Loading...</p>
+      </div>
+    </div>
+  );
 
   const categoryName = categories.find(c => c.id === puja.category_id)?.name || '--';
   const subCategoryName = subCategories.find(sc => sc.id === puja.sub_category_id)?.name || '--';
   const selectedPackages = packages.filter(p => (puja.package_id || []).includes(p.id));
 
-  const getImgSrc = (img) => {
-    if (!img) return '/build/assets/images/default.jpg';
-    if (img.startsWith('http')) return img;
-    return '/' + img;
-  };
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      <div style={styles.card}>
-        <div style={styles.cardHeader}>
-          <h2 style={{ margin: 0 }}>View Puja</h2>
-          <button onClick={() => navigate('/admin/puja-list')} style={styles.backBtn}>Back</button>
+    <div className="cd-page">
+      {/* Hero Section */}
+      <div className="cd-hero-wrap">
+        <div className="cd-hero">
+          <div className="cd-hero-left">
+            {puja.puja_images && puja.puja_images.length > 0 ? (
+              <div className="cd-hero-avatar-wrap">
+                <img className="cd-hero-avatar" src={getImgSrc(puja.puja_images[0])} alt="" onError={(e) => { e.target.style.display = 'none'; }} />
+              </div>
+            ) : (
+              <div className="cd-hero-avatar-wrap">
+                <div className="cd-hero-avatar cd-hero-initial">
+                  <HandHeart size={32} />
+                </div>
+              </div>
+            )}
+            <div className="cd-hero-info">
+              <h2 className="cd-hero-name">{puja.puja_title || '--'}</h2>
+              <p className="cd-hero-phone">{puja.puja_subtitle || ''}</p>
+              <p className="cd-hero-email">{puja.puja_place || ''}</p>
+            </div>
+          </div>
         </div>
-        <div style={{ padding: 20 }}>
-          <div style={styles.grid2}>
-            <div><label style={styles.label}>Title</label><div style={styles.value}>{puja.puja_title || '--'}</div></div>
-            <div><label style={styles.label}>Subtitle</label><div style={styles.value}>{puja.puja_subtitle || '--'}</div></div>
+        <div className="cd-hero-stats">
+          <div className="cd-stat-chip" style={{ background: '#f0fdf4', color: '#15803d' }}>
+            <span className="cd-stat-val">{puja.puja_duration || '--'}</span>
+            <span className="cd-stat-lbl">Duration (mins)</span>
           </div>
-          <div style={{ ...styles.grid2, marginTop: 15 }}>
-            <div><label style={styles.label}>Start Date Time</label><div style={styles.value}>{puja.puja_start_datetime ? new Date(puja.puja_start_datetime).toLocaleString() : '--'}</div></div>
-            <div><label style={styles.label}>Puja Duration</label><div style={styles.value}>{puja.puja_duration ? puja.puja_duration + ' mins' : '--'}</div></div>
+          <div className="cd-stat-chip" style={{ background: '#f5f3ff', color: '#7c3aed' }}>
+            <span className="cd-stat-val">{selectedPackages.length}</span>
+            <span className="cd-stat-lbl">Packages</span>
           </div>
-          <div style={{ ...styles.grid3, marginTop: 15 }}>
-            <div><label style={styles.label}>Category</label><div style={styles.value}>{categoryName}</div></div>
-            <div><label style={styles.label}>Subcategory</label><div style={styles.value}>{subCategoryName}</div></div>
-            <div><label style={styles.label}>Place</label><div style={styles.value}>{puja.puja_place || '--'}</div></div>
+          <div className="cd-stat-chip" style={{ background: '#fffbeb', color: '#b45309' }}>
+            <span className="cd-stat-val">{puja.puja_benefits?.length || 0}</span>
+            <span className="cd-stat-lbl">Benefits</span>
           </div>
-          <div style={{ marginTop: 15 }}>
-            <label style={styles.label}>Packages</label>
-            <div style={styles.value}>{selectedPackages.map(p => `${p.title} - ${p.package_price}`).join(', ') || '--'}</div>
-          </div>
-          <div style={{ marginTop: 15 }}>
-            <label style={styles.label}>About Puja</label>
-            <div style={{ ...styles.value, whiteSpace: 'pre-wrap' }}>{puja.long_description || '--'}</div>
-          </div>
+        </div>
+      </div>
 
-          {puja.puja_benefits && puja.puja_benefits.length > 0 && (
-            <div style={{ border: '1px solid #d1d5db', borderRadius: 8, padding: 15, marginTop: 15 }}>
-              <h3>Puja Benefits</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
-                {puja.puja_benefits.map((b, idx) => (
-                  <div key={idx} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12 }}>
-                    <strong>{b.title}</strong>
-                    <p style={{ color: '#6b7280', marginTop: 5 }}>{b.description}</p>
+      {/* Detail Info */}
+      <div className="cd-content">
+        <div className="ad-section">
+          <h3 className="ad-section-title"><HandHeart size={14} /> Puja Details</h3>
+          <div className="cd-irow">
+            <span className="cd-irow-label">Title</span>
+            <span className="cd-irow-value">{puja.puja_title || '--'}</span>
+          </div>
+          <div className="cd-irow">
+            <span className="cd-irow-label">Subtitle</span>
+            <span className="cd-irow-value">{puja.puja_subtitle || '--'}</span>
+          </div>
+          <div className="cd-irow">
+            <span className="cd-irow-label">Start Date Time</span>
+            <span className="cd-irow-value">{puja.puja_start_datetime ? new Date(puja.puja_start_datetime).toLocaleString() : '--'}</span>
+          </div>
+          <div className="cd-irow">
+            <span className="cd-irow-label">Duration</span>
+            <span className="cd-irow-value">{puja.puja_duration ? puja.puja_duration + ' mins' : '--'}</span>
+          </div>
+          <div className="cd-irow">
+            <span className="cd-irow-label">Category</span>
+            <span className="cd-irow-value">{categoryName}</span>
+          </div>
+          <div className="cd-irow">
+            <span className="cd-irow-label">Subcategory</span>
+            <span className="cd-irow-value">{subCategoryName}</span>
+          </div>
+          <div className="cd-irow">
+            <span className="cd-irow-label">Place</span>
+            <span className="cd-irow-value">{puja.puja_place || '--'}</span>
+          </div>
+          <div className="cd-irow">
+            <span className="cd-irow-label">Packages</span>
+            <span className="cd-irow-value">{selectedPackages.map(p => `${p.title} - ${p.package_price}`).join(', ') || '--'}</span>
+          </div>
+        </div>
+
+        {/* About Puja */}
+        <div className="ad-section">
+          <h3 className="ad-section-title">About Puja</h3>
+          <p className="ad-bio">{puja.long_description || '--'}</p>
+        </div>
+
+        {/* Benefits */}
+        {puja.puja_benefits && puja.puja_benefits.length > 0 && (
+          <div className="ad-section">
+            <h3 className="ad-section-title">Puja Benefits</h3>
+            <div className="ad-review-list">
+              {puja.puja_benefits.map((b, idx) => (
+                <div key={idx} className="ad-review-card">
+                  <div className="ad-review-avatar">{idx + 1}</div>
+                  <div className="ad-review-body">
+                    <div className="ad-review-top">
+                      <span className="ad-review-name">{b.title}</span>
+                    </div>
+                    <p className="ad-review-text">{b.description}</p>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
+        )}
 
-          {puja.puja_images && puja.puja_images.length > 0 && (
-            <div style={{ marginTop: 15 }}>
-              <label style={styles.label}>Images</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                {puja.puja_images.map((img, idx) => (
-                  <img key={idx} src={getImgSrc(img)} alt="" style={{ width: 150, height: 150, objectFit: 'cover', borderRadius: 8 }}
-                    onError={(e) => { e.target.style.display = 'none'; }} />
-                ))}
-              </div>
+        {/* Images */}
+        {puja.puja_images && puja.puja_images.length > 0 && (
+          <div className="ad-section">
+            <h3 className="ad-section-title">Images</h3>
+            <div className="cd-grid">
+              {puja.puja_images.map((img, idx) => (
+                <img key={idx} className="cd-item-img" src={getImgSrc(img)} alt=""
+                  onError={(e) => { e.target.style.display = 'none'; }} />
+              ))}
             </div>
-          )}
+          </div>
+        )}
+
+        {/* Back button */}
+        <div className="af-footer">
+          <button className="af-btn-cancel" onClick={() => navigate('/admin/puja-list')}>
+            <ArrowLeft size={14} /> Back to List
+          </button>
         </div>
       </div>
     </div>
   );
-};
-
-const styles = {
-  card: { background: '#fff', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' },
-  cardHeader: { padding: '15px 20px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  backBtn: { background: '#6b7280', color: '#fff', border: 'none', padding: '6px 16px', borderRadius: 6, cursor: 'pointer' },
-  label: { display: 'block', fontWeight: 600, marginBottom: 4, fontSize: 13, color: '#374151' },
-  value: { padding: '8px 12px', background: '#f9fafb', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 14 },
-  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 },
-  grid3: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 15 }
 };
 
 export default ViewPuja;

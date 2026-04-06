@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Bot } from 'lucide-react';
 import { aiAstrologerApi } from '../api/services';
+import '../styles/AstrologerForm.css';
 
 const MasterAiBotForm = () => {
   const { id } = useParams();
@@ -71,86 +73,92 @@ const MasterAiBotForm = () => {
   };
 
   return (
-    <div style={{ maxWidth: 700, margin: '0 auto' }}>
-      <div style={styles.card}>
-        <div style={styles.cardHeader}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>{isEdit ? 'Edit' : 'Create'} Master Bot</h2>
-        </div>
+    <div className="af-page">
+      <div className="af-header">
+        <Bot size={22} color="#7c3aed" />
+        <h2 className="af-title">{isEdit ? 'Edit' : 'Create'} Master Bot</h2>
+      </div>
 
-        <form onSubmit={handleSubmit} style={{ padding: 20 }}>
-          <div style={{ marginBottom: 16 }}>
-            <label style={styles.label}>Name</label>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Enter bot name"
-              style={styles.input}
-            />
-          </div>
+      <div className="af-card">
+        <form onSubmit={handleSubmit}>
+          <div className="af-grid">
+            <div className="af-full af-field">
+              <label className="af-label">Name</label>
+              <input
+                type="text"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                placeholder="Enter bot name"
+                className="af-input"
+              />
+            </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <label style={styles.label}>Profile Image</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              style={{ display: 'block', marginBottom: 10 }}
-            />
-            {imagePreview && (
-              <div style={{ marginTop: 8 }}>
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 8, border: '1px solid #d1d5db' }}
-                  onError={(e) => { e.target.style.display = 'none'; }}
+            <div className="af-full af-field">
+              <label className="af-label">Profile Image</label>
+              <div className="af-img-upload">
+                {imagePreview && (
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="af-img-preview"
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="af-input"
                 />
               </div>
-            )}
-          </div>
+            </div>
 
-          <div style={styles.grid2}>
-            <div>
-              <label style={styles.label}>Chat Charge INR</label>
+            <div className="af-field">
+              <label className="af-label">Chat Charge INR</label>
               <input
                 type="number"
                 name="chat_charge_inr"
                 value={form.chat_charge_inr}
                 onChange={handleChange}
                 placeholder="Enter charge in INR"
-                style={styles.input}
+                className="af-input"
                 min="0"
               />
             </div>
-            <div>
-              <label style={styles.label}>Chat Charge USD</label>
+
+            <div className="af-field">
+              <label className="af-label">Chat Charge USD</label>
               <input
                 type="number"
                 name="chat_charge_usd"
                 value={form.chat_charge_usd}
                 onChange={handleChange}
                 placeholder="Enter charge in USD"
-                style={styles.input}
+                className="af-input"
                 min="0"
+              />
+            </div>
+
+            <div className="af-full af-field">
+              <label className="af-label">System Instruction <span className="af-req">*</span></label>
+              <textarea
+                name="system_instruction"
+                value={form.system_instruction}
+                onChange={handleChange}
+                placeholder="Enter system instruction for the AI bot"
+                className="af-textarea"
+                style={{ minHeight: 140 }}
+                required
               />
             </div>
           </div>
 
-          <div style={{ marginTop: 16 }}>
-            <label style={styles.label}>System Instruction <span style={{ color: 'red' }}>*</span></label>
-            <textarea
-              name="system_instruction"
-              value={form.system_instruction}
-              onChange={handleChange}
-              placeholder="Enter system instruction for the AI bot"
-              style={{ ...styles.input, minHeight: 140, resize: 'vertical' }}
-              required
-            />
-          </div>
-
-          <div style={{ marginTop: 24 }}>
-            <button type="submit" style={styles.submitBtn}>
+          <div className="af-footer">
+            <button type="button" className="af-btn-cancel" onClick={() => navigate('/admin/master-ai-bot')}>
+              Cancel
+            </button>
+            <button type="submit" className="af-btn-submit">
               {isEdit ? 'Update' : 'Submit'}
             </button>
           </div>
@@ -158,15 +166,6 @@ const MasterAiBotForm = () => {
       </div>
     </div>
   );
-};
-
-const styles = {
-  card: { background: '#fff', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' },
-  cardHeader: { padding: '16px 20px', borderBottom: '1px solid #e5e7eb' },
-  label: { display: 'block', fontWeight: 500, marginBottom: 5, fontSize: 14, color: '#374151' },
-  input: { width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' },
-  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
-  submitBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '10px 28px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 }
 };
 
 export default MasterAiBotForm;

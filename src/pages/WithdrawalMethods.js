@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import DataTable from '../components/DataTable';
-import Modal from '../components/Modal';
+import { Wallet, Pencil, X } from 'lucide-react';
+import Loader from '../components/Loader';
 import { withdrawalApi } from '../api/services';
+import '../styles/Customers.css';
 
 const WithdrawalMethods = () => {
   const [methods, setMethods] = useState([]);
@@ -31,7 +32,10 @@ const WithdrawalMethods = () => {
   };
 
   const handleEdit = async () => {
-    if (!editName.trim()) { alert('Please enter method name'); return; }
+    if (!editName.trim()) {
+      alert('Please enter method name');
+      return;
+    }
     try {
       await withdrawalApi.methodEdit({ filed_id: editId, name: editName });
       setEditModal(false);
@@ -39,53 +43,83 @@ const WithdrawalMethods = () => {
     } catch (e) { console.error(e); }
   };
 
-  const ToggleSwitch = ({ checked, onChange }) => (
-    <div onClick={onChange} style={{
-      width: 42, height: 22, borderRadius: 11, cursor: 'pointer', position: 'relative',
-      background: checked ? '#10b981' : '#d1d5db', transition: 'background 0.2s'
-    }}>
-      <div style={{
-        width: 18, height: 18, borderRadius: '50%', background: '#fff', position: 'absolute',
-        top: 2, left: checked ? 22 : 2, transition: 'left 0.2s'
-      }} />
-    </div>
-  );
-
-  const columns = [
-    { header: '#', render: (_, i) => i + 1 },
-    { header: 'Method Name', render: (row) => row.method_name || '-' },
-    {
-      header: 'Status', render: (row) => (
-        <ToggleSwitch checked={row.isActive == 1} onChange={() => handleStatusToggle(row.id)} />
-      )
-    },
-    {
-      header: 'Action', render: (row) => (
-        <button onClick={() => { setEditId(row.id); setEditName(row.method_name || ''); setEditModal(true); }}
-          style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '5px 14px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>Edit</button>
-      )
-    }
-  ];
-
   return (
     <div>
-      <DataTable
-        title="Withdrawal Methods"
-        columns={columns}
-        data={methods}
-      />
+      {/* Page Top Bar */}
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <Wallet size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Withdrawal Methods</h2>
+            <div className="cust-count">{methods.length} total</div>
+          </div>
+        </div>
+      </div>
 
-      <Modal isOpen={editModal} onClose={() => setEditModal(false)} title="Edit Method">
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ fontWeight: 500, fontSize: 13, display: 'block', marginBottom: 4 }}>Method Name</label>
-          <input type="text" value={editName} onChange={e => setEditName(e.target.value)}
-            style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }} />
+      {/* Table Card */}
+      <div className="cust-card">
+        {loading ? <Loader text="Loading methods..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Method Name</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {methods.length === 0 ? (
+                  <tr><td colSpan={4} className="cust-no-data">No withdrawal methods found.</td></tr>
+                ) : methods.map((row, i) => (
+                  <tr key={row.id}>
+                    <td>{i + 1}</td>
+                    <td className="cust-name-cell">{row.method_name || '-'}</td>
+                    <td>
+                      <div className="cust-toggle-wrap">
+                        <div className={`cust-toggle ${row.isActive == 1 ? 'on' : ''}`} onClick={() => handleStatusToggle(row.id)}>
+                          <div className="cust-toggle-knob" />
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="cust-actions">
+                        <button onClick={() => { setEditId(row.id); setEditName(row.method_name || ''); setEditModal(true); }}
+                          className="cust-action-btn cust-action-edit" title="Edit">
+                          <Pencil size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Edit Modal */}
+      {editModal && (
+        <div className="cust-overlay" onClick={() => setEditModal(false)}>
+          <div className="cust-modal cust-modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Edit Method</h3>
+              <button onClick={() => setEditModal(false)} className="cust-modal-close"><X size={20} /></button>
+            </div>
+            <div className="cust-modal-body">
+              <div className="cust-form-group">
+                <label>Method Name</label>
+                <input type="text" value={editName} onChange={e => setEditName(e.target.value)} placeholder="Enter method name" />
+              </div>
+              <div className="cust-form-row">
+                <button onClick={() => setEditModal(false)} className="cust-btn cust-btn-ghost cust-btn-full">Cancel</button>
+                <button onClick={handleEdit} className="cust-btn cust-btn-primary cust-btn-full">Save</button>
+              </div>
+            </div>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button onClick={() => setEditModal(false)} style={{ padding: '8px 20px', background: '#6b7280', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>Cancel</button>
-          <button onClick={handleEdit} style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>Save</button>
-        </div>
-      </Modal>
+      )}
     </div>
   );
 };

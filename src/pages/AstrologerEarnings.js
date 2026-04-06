@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { earningApi } from '../api/services';
+import Loader from '../components/Loader';
+import { Wallet, Search, X, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import moment from 'moment';
+import 'react-datepicker/dist/react-datepicker.css';
+import '../styles/Customers.css';
 
 const AstrologerEarnings = () => {
   const [data, setData] = useState([]);
@@ -9,12 +15,19 @@ const AstrologerEarnings = () => {
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(false);
   const [filterAstrologerId, setFilterAstrologerId] = useState('');
+  const [search, setSearch] = useState('');
+  const [fromDate, setFromDate] = useState(moment().toDate());
+  const [toDate, setToDate] = useState(moment().toDate());
+  const [dateApplied, setDateApplied] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const params = { page };
       if (filterAstrologerId) params.astrologerId = filterAstrologerId;
+      if (search) params.searchString = search;
+      if (dateApplied && fromDate) params.from_date = moment(fromDate).format('YYYY-MM-DD');
+      if (dateApplied && toDate) params.to_date = moment(toDate).format('YYYY-MM-DD');
       const res = await earningApi.astrologerEarning(params);
       const d = res.data.data || res.data;
       setData(d.partnerWiseEarning || []);
@@ -27,80 +40,198 @@ const AstrologerEarnings = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, [page, filterAstrologerId]);
+  useEffect(() => { fetchData(); }, [page, filterAstrologerId, dateApplied]);
+
+  const handleSearch = () => { setPage(1); fetchData(); };
+
+  const handleDateSubmit = () => {
+    setDateApplied(true);
+    setPage(1);
+  };
+
+  const clearFilters = () => {
+    setSearch('');
+    setFilterAstrologerId('');
+    setFromDate(moment().toDate());
+    setToDate(moment().toDate());
+    setDateApplied(false);
+    setPage(1);
+  };
 
   const fmt = (val) => val != null ? `₹${Number(val).toFixed(2)}` : '₹0.00';
 
-  return (
-    <div style={{ padding: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Astrologer Earnings</h2>
-      </div>
-
-      {/* Filter */}
-      <div style={{ marginBottom: 16 }}>
-        <select value={filterAstrologerId} onChange={e => { setFilterAstrologerId(e.target.value); setPage(1); }} style={inputStyle}>
-          <option value="">All Astrologers</option>
-          {astrologers.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-        </select>
-      </div>
-
-      {/* Table */}
-      <div style={{ background: '#fff', borderRadius: 10, overflow: 'auto', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
-          <thead>
-            <tr style={{ background: '#f8f9fa' }}>
-              <th style={thStyle}>#</th>
-              <th style={thStyle}>Astrologer</th>
-              <th style={thStyle}>Chat Earning</th>
-              <th style={thStyle}>Call Earning</th>
-              <th style={thStyle}>Report Earning</th>
-              <th style={thStyle}>Gift Earning</th>
-              <th style={thStyle}>Total Withdrawal</th>
-              <th style={thStyle}>Wallet Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 30, color: '#999' }}>Loading...</td></tr>
-            ) : data.length > 0 ? data.map((row, i) => (
-              <tr key={row.astrologerId || i}>
-                <td style={tdStyle}>{(page - 1) * 15 + i + 1}</td>
-                <td style={{ ...tdStyle, fontWeight: 600 }}>{row.astrologerName || '-'}</td>
-                <td style={tdStyle}>{fmt(row.chatEarning)}</td>
-                <td style={tdStyle}>{fmt(row.callEarning)}</td>
-                <td style={tdStyle}>{fmt(row.reportEarning)}</td>
-                <td style={tdStyle}>{fmt(row.giftEarning)}</td>
-                <td style={{ ...tdStyle, color: '#dc2626' }}>{fmt(row.totalWithdrawal)}</td>
-                <td style={{ ...tdStyle, color: '#16a34a', fontWeight: 600 }}>{fmt(row.totalbalance)}</td>
-              </tr>
-            )) : (
-              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 30, color: '#999' }}>No astrologer earnings data found.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 16 }}>
-          <button disabled={page <= 1} onClick={() => setPage(page - 1)} style={{ ...pgBtn, opacity: page <= 1 ? 0.5 : 1 }}>Prev</button>
-          {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-            const p = page <= 3 ? i + 1 : page - 2 + i;
-            if (p > totalPages || p < 1) return null;
-            return <button key={p} onClick={() => setPage(p)} style={{ ...pgBtn, background: p === page ? '#7c3aed' : '#fff', color: p === page ? '#fff' : '#333' }}>{p}</button>;
-          })}
-          <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} style={{ ...pgBtn, opacity: page >= totalPages ? 0.5 : 1 }}>Next</button>
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(1, page - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+    if (start > 1) { pages.push(1); if (start > 2) pages.push('dots-start'); }
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < totalPages) { if (end < totalPages - 1) pages.push('dots-end'); pages.push(totalPages); }
+    return (
+      <div className="cust-pagination">
+        <span className="cust-page-info">
+          Page {page} of {totalPages} ({totalRecords} total)
+        </span>
+        <div className="cust-page-btns">
+          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="cust-page-btn">
+            <ChevronLeft size={14} />
+          </button>
+          {pages.map((p, idx) =>
+            typeof p === 'string' ? (
+              <span key={p} className="cust-page-dots">...</span>
+            ) : (
+              <button key={p} onClick={() => setPage(p)} className={`cust-page-btn ${p === page ? 'active' : ''}`}>
+                {p}
+              </button>
+            )
+          )}
+          <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="cust-page-btn">
+            <ChevronRight size={14} />
+          </button>
         </div>
-      )}
-      <div style={{ textAlign: 'center', marginTop: 8, fontSize: 12, color: '#999' }}>Total Records: {totalRecords}</div>
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      {/* Top Bar */}
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <Wallet size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Astrologer Earnings</h2>
+            <div className="cust-count">{totalRecords} total records</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters Bar */}
+      <div className="cust-filterbar">
+        <div className="cust-filter-group cust-filter-search-group">
+          <label className="cust-filter-label">Search</label>
+          <div className="cust-filter-search">
+            <Search size={14} className="cust-search-icon" />
+            <input
+              type="text"
+              placeholder="Search astrologer..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
+              className="cust-input cust-search-input"
+            />
+            {search && (
+              <button onClick={() => { setSearch(''); setPage(1); }} className="cust-search-clear">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="cust-filter-group">
+          <label className="cust-filter-label">Astrologer</label>
+          <select
+            value={filterAstrologerId}
+            onChange={e => { setFilterAstrologerId(e.target.value); setPage(1); }}
+            className="cust-input"
+          >
+            <option value="">All Astrologers</option>
+            {astrologers.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+        </div>
+
+        <div className="cust-filter-date-row">
+          <div className="cust-filter-group">
+            <label className="cust-filter-label">From</label>
+            <div className="cust-datepicker-wrap">
+              <Calendar size={14} className="cust-datepicker-icon" />
+              <DatePicker
+                selected={fromDate}
+                onChange={date => { setFromDate(date); setDateApplied(false); }}
+                dateFormat="dd MMM yyyy"
+                className="cust-input cust-datepicker-input"
+                placeholderText="Select date"
+              />
+            </div>
+          </div>
+          <div className="cust-filter-group">
+            <label className="cust-filter-label">To</label>
+            <div className="cust-datepicker-wrap">
+              <Calendar size={14} className="cust-datepicker-icon" />
+              <DatePicker
+                selected={toDate}
+                onChange={date => { setToDate(date); setDateApplied(false); }}
+                dateFormat="dd MMM yyyy"
+                className="cust-input cust-datepicker-input"
+                placeholderText="Select date"
+              />
+            </div>
+          </div>
+          <div className="cust-filter-actions">
+            <button onClick={handleDateSubmit} className="cust-btn cust-btn-primary">
+              <Search size={13} /> Apply
+            </button>
+            {(search || dateApplied || filterAstrologerId) && (
+              <button onClick={clearFilters} className="cust-btn cust-btn-danger">
+                <X size={13} /> Clear
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Card + Table */}
+      <div className="cust-card">
+        {loading ? <Loader text="Loading astrologer earnings..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Astrologer</th>
+                  <th>Chat Earning</th>
+                  <th>Call Earning</th>
+                  <th>Report Earning</th>
+                  <th>Gift Earning</th>
+                  <th>Total Withdrawal</th>
+                  <th>Wallet Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length > 0 ? data.map((row, i) => (
+                  <tr key={row.astrologerId || i}>
+                    <td>{(page - 1) * 15 + i + 1}</td>
+                    <td className="cust-name-cell">{row.astrologerName || '-'}</td>
+                    <td>{fmt(row.chatEarning)}</td>
+                    <td>{fmt(row.callEarning)}</td>
+                    <td>{fmt(row.reportEarning)}</td>
+                    <td>{fmt(row.giftEarning)}</td>
+                    <td>
+                      <span className="cust-verify-badge unverified">
+                        {fmt(row.totalWithdrawal)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="cust-verify-badge verified">
+                        {fmt(row.totalbalance)}
+                      </span>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan={8} className="cust-no-data">No astrologer earnings data found.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {renderPagination()}
+      </div>
     </div>
   );
 };
-
-const thStyle = { padding: '10px 12px', textAlign: 'left', fontSize: 12, fontWeight: 600, borderBottom: '2px solid #e5e7eb', whiteSpace: 'nowrap' };
-const tdStyle = { padding: '8px 12px', borderBottom: '1px solid #f0f0f0', fontSize: 13 };
-const inputStyle = { padding: '8px 12px', border: '1px solid #ddd', borderRadius: 6, fontSize: 13, minWidth: 200 };
-const pgBtn = { padding: '6px 12px', border: '1px solid #ddd', borderRadius: 6, cursor: 'pointer', fontSize: 13 };
 
 export default AstrologerEarnings;

@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { storyApi } from '../api/services';
+import Loader from '../components/Loader';
+import { BookOpen, Trash2, Eye, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import Swal from 'sweetalert2';
+import '../styles/Customers.css';
+
+import getImgSrc from '../utils/getImageUrl';
 
 const Stories = () => {
   const [data, setData] = useState([]);
@@ -9,8 +15,6 @@ const Stories = () => {
   const [start, setStart] = useState(0);
   const [end, setEnd] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
   const [viewerImg, setViewerImg] = useState(null);
 
   const fetchData = async () => {
@@ -29,15 +33,29 @@ const Stories = () => {
 
   useEffect(() => { fetchData(); }, [page]);
 
-  const handleDelete = async () => {
-    try { await storyApi.delete({ del_id: deleteId }); setShowDeleteModal(false); fetchData(); } catch (err) { console.error(err); }
+  const handleDelete = async (id) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'Do you really want to delete these records? This process cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, Delete',
+      cancelButtonText: 'Cancel',
+    });
+    if (result.isConfirmed) {
+      try {
+        await storyApi.delete({ del_id: id });
+        Swal.fire({ title: 'Deleted!', icon: 'success', confirmButtonColor: '#7c3aed', timer: 1500, showConfirmButton: false });
+        fetchData();
+      } catch (err) {
+        console.error(err);
+        Swal.fire({ title: 'Error!', text: 'Failed to delete', icon: 'error', confirmButtonColor: '#7c3aed' });
+      }
+    }
   };
 
-  const getImgSrc = (img) => {
-    if (!img) return '/build/assets/images/person.png';
-    if (img.startsWith('http')) return img;
-    return '/' + img;
-  };
 
   const formatDate = (d) => {
     if (!d) return '--';
@@ -54,137 +72,192 @@ const Stories = () => {
   };
 
   const renderPagination = () => {
-    const pages = [];
-    for (let i = 1; i <= totalPages; i++) pages.push(i);
+    if (totalPages <= 1) return null;
+
+    const getPageNumbers = () => {
+      if (totalPages <= 7) {
+        return Array.from({ length: totalPages }, (_, i) => i + 1);
+      }
+      const pages = new Set([1, totalPages]);
+      for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
+        pages.add(i);
+      }
+      const sorted = [...pages].sort((a, b) => a - b);
+      const result = [];
+      for (let i = 0; i < sorted.length; i++) {
+        if (i > 0 && sorted[i] - sorted[i - 1] > 1) {
+          result.push('...');
+        }
+        result.push(sorted[i]);
+      }
+      return result;
+    };
+
     return (
-      <div style={styles.paginationWrapper}>
-        <div style={styles.showingText}>Showing {totalRecords === 0 ? 0 : start} to {end} of {totalRecords} entries</div>
-        <div style={styles.paginationButtons}>
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ ...styles.pageBtn, ...(page === 1 ? styles.pageBtnDisabled : {}) }}>Prev</button>
-          {pages.map(p => (<button key={p} onClick={() => setPage(p)} style={{ ...styles.pageBtn, ...(p === page ? styles.pageBtnActive : {}) }}>{p}</button>))}
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ ...styles.pageBtn, ...(page === totalPages ? styles.pageBtnDisabled : {}) }}>Next</button>
+      <div className="cust-pagination">
+        <span className="cust-page-info">
+          Showing {totalRecords === 0 ? 0 : start} to {end} of {totalRecords} entries
+        </span>
+        <div className="cust-page-btns">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="cust-page-btn"
+          >
+            <ChevronLeft size={14} />
+          </button>
+          {getPageNumbers().map((p, idx) =>
+            p === '...' ? (
+              <span key={`dots-${idx}`} className="cust-page-dots">...</span>
+            ) : (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`cust-page-btn ${p === page ? 'active' : ''}`}
+              >
+                {p}
+              </button>
+            )
+          )}
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="cust-page-btn"
+          >
+            <ChevronRight size={14} />
+          </button>
         </div>
       </div>
     );
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.header}>
-          <h2 style={styles.title}>Stories</h2>
+    <div>
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <BookOpen size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Stories</h2>
+            <div className="cust-count">{totalRecords} total stories</div>
+          </div>
         </div>
+        <div className="cust-topbar-right" />
+      </div>
 
-        <div style={styles.tableWrapper}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                {['#', 'Profile', 'Name', 'Media Type', 'Media', 'Views', 'Created At', 'Action'].map((h, i) => (
-                  <th key={i} style={styles.th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={8} style={styles.noData}>Loading...</td></tr>
-              ) : data.length === 0 ? (
-                <tr><td colSpan={8} style={styles.noData}>No Data Available</td></tr>
-              ) : (
-                data.map((row, index) => (
-                  <tr key={row.id || index} style={index % 2 === 0 ? styles.rowEven : styles.rowOdd}>
-                    <td style={styles.td}>{(page - 1) * 15 + index + 1}</td>
-                    <td style={styles.td}>
-                      <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer' }}
-                        onClick={() => setViewerImg(getImgSrc(row.profileImage))}>
-                        <img src={getImgSrc(row.profileImage)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e) => { e.target.src = '/build/assets/images/person.png'; }} />
-                      </div>
-                    </td>
-                    <td style={styles.td}><span style={{ fontWeight: 500 }}>{row.name || '--'}</span></td>
-                    <td style={styles.td}>
-                      <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600, background: row.mediaType === 'video' ? '#e0e7ff' : '#d1fae5', color: row.mediaType === 'video' ? '#3730a3' : '#065f46', textTransform: 'capitalize' }}>
-                        {row.mediaType || '--'}
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      {row.mediaType === 'image' ? (
-                        <div style={{ width: 50, height: 50, borderRadius: 6, overflow: 'hidden', cursor: 'pointer' }}
-                          onClick={() => setViewerImg('/' + row.media)}>
-                          <img src={'/' + row.media} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => { e.target.style.display = 'none'; }} />
+      <div className="cust-card">
+        {loading ? <Loader text="Loading stories..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Profile</th>
+                  <th>Name</th>
+                  <th>Media Type</th>
+                  <th>Media</th>
+                  <th>Views</th>
+                  <th>Created At</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length === 0 ? (
+                  <tr><td colSpan={8} className="cust-no-data">No Data Available</td></tr>
+                ) : (
+                  data.map((row, index) => (
+                    <tr key={row.id || index}>
+                      <td>{(page - 1) * 15 + index + 1}</td>
+                      <td>
+                        <img
+                          src={getImgSrc(row.profileImage)}
+                          alt=""
+                          className="cust-avatar"
+                          onClick={() => setViewerImg(getImgSrc(row.profileImage))}
+                          onError={(e) => { e.target.src = '/build/assets/images/person.png'; }}
+                        />
+                      </td>
+                      <td className="cust-name-cell">{row.name || '--'}</td>
+                      <td>
+                        <span className={`cust-req-badge ${row.mediaType === 'video' ? 'purple' : 'blue'}`}>
+                          {row.mediaType || '--'}
+                        </span>
+                      </td>
+                      <td>
+                        {row.mediaType === 'image' ? (
+                          <img
+                            src={'/' + row.media}
+                            alt=""
+                            className="cust-img-preview"
+                            onClick={() => setViewerImg('/' + row.media)}
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                        ) : row.mediaType === 'video' ? (
+                          <video width="140" height="60" controls className="cust-img-preview">
+                            <source src={'/' + row.media} type="video/mp4" />
+                          </video>
+                        ) : (
+                          <span className="cust-date-cell">--</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className="cust-req-badge blue">{row.StoryViewCount || 0}</span>
+                      </td>
+                      <td className="cust-date-cell">{formatDate(row.created_at)}</td>
+                      <td>
+                        <div className="cust-actions">
+                          <button
+                            onClick={() => {
+                              if (row.mediaType === 'image' && row.media) {
+                                setViewerImg('/' + row.media);
+                              } else if (row.profileImage) {
+                                setViewerImg(getImgSrc(row.profileImage));
+                              }
+                            }}
+                            className="cust-action-btn cust-action-view"
+                            title="View"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(row.id)}
+                            className="cust-action-btn cust-action-delete"
+                            title="Delete"
+                          >
+                            <Trash2 size={15} />
+                          </button>
                         </div>
-                      ) : row.mediaType === 'video' ? (
-                        <video width="140" height="60" controls style={{ borderRadius: 6 }}>
-                          <source src={'/' + row.media} type="video/mp4" />
-                        </video>
-                      ) : (
-                        <span style={{ color: '#9ca3af', fontSize: 12 }}>--</span>
-                      )}
-                    </td>
-                    <td style={styles.td}>
-                      <span style={{ color: '#059669', fontWeight: 600 }}>{row.StoryViewCount || 0}</span>
-                    </td>
-                    <td style={styles.td}>{formatDate(row.created_at)}</td>
-                    <td style={styles.td}>
-                      <button onClick={() => { setDeleteId(row.id); setShowDeleteModal(true); }} style={styles.deleteBtn}>Delete</button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
         {renderPagination()}
       </div>
 
-      {showDeleteModal && (
-        <div style={styles.overlay} onClick={() => setShowDeleteModal(false)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, textAlign: 'center' }}>Are you sure?</h3>
-            <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 8 }}>Do you really want to delete these records? This process cannot be undone.</p>
-            <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center', gap: 10 }}>
-              <button onClick={() => setShowDeleteModal(false)} style={{ ...styles.addBtn, background: '#6b7280' }}>Cancel</button>
-              <button onClick={handleDelete} style={{ ...styles.addBtn, background: '#ef4444' }}>Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {viewerImg && (
-        <div style={styles.overlay} onClick={() => setViewerImg(null)}>
-          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }} onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setViewerImg(null)} style={styles.closeBtn}>✕</button>
-            <img src={viewerImg} alt="" style={{ maxWidth: '90vw', maxHeight: '85vh', borderRadius: 8, objectFit: 'contain' }} />
+        <div className="cust-overlay" onClick={() => setViewerImg(null)}>
+          <div className="cust-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Image Preview</h3>
+              <button className="cust-modal-close" onClick={() => setViewerImg(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="cust-modal-body">
+              <img
+                src={viewerImg}
+                alt="Preview"
+                onError={(e) => { e.target.src = '/build/assets/images/person.png'; }}
+              />
+            </div>
           </div>
         </div>
       )}
     </div>
   );
-};
-
-const styles = {
-  container: { padding: 0 },
-  card: { background: '#fff', borderRadius: 10, boxShadow: '0 2px 12px rgba(0,0,0,0.07)', padding: 24 },
-  header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 },
-  title: { margin: 0, fontSize: 22, fontWeight: 700, color: '#1e293b' },
-  addBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  deleteBtn: { background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 500, fontSize: 13 },
-  tableWrapper: { overflowX: 'auto', width: '100%' },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  th: { background: '#7c3aed', color: '#fff', padding: '12px 14px', textAlign: 'left', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', borderBottom: '2px solid #6d28d9' },
-  td: { padding: '10px 14px', fontSize: 13, color: '#374151', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap', verticalAlign: 'middle' },
-  rowEven: { background: '#f8f9fa' },
-  rowOdd: { background: '#fff' },
-  noData: { padding: '40px 14px', textAlign: 'center', color: '#9ca3af', fontSize: 15 },
-  paginationWrapper: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 18, flexWrap: 'wrap', gap: 12 },
-  showingText: { fontSize: 13, color: '#6b7280' },
-  paginationButtons: { display: 'flex', gap: 4, flexWrap: 'wrap' },
-  pageBtn: { padding: '6px 14px', border: '1px solid #d1d5db', borderRadius: 4, background: '#fff', color: '#374151', cursor: 'pointer', fontSize: 13 },
-  pageBtnActive: { background: '#7c3aed', color: '#fff', borderColor: '#7c3aed' },
-  pageBtnDisabled: { opacity: 0.5, cursor: 'not-allowed' },
-  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 },
-  modal: { background: '#fff', borderRadius: 12, padding: 30, maxWidth: 400, width: '90%' },
-  closeBtn: { position: 'absolute', top: -15, right: -15, background: '#fff', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }
 };
 
 export default Stories;

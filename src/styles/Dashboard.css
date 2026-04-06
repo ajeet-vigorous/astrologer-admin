@@ -1,0 +1,484 @@
+/* ===== DASHBOARD PAGE - PREMIUM DESIGN ===== */
+
+/* Page Header */
+.db-topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.db-topbar-icon {
+  color: #7c3aed;
+  flex-shrink: 0;
+}
+
+.db-title {
+  margin: 0;
+  font-size: 15px;
+  text-transform: uppercase;
+  font-weight: 900;
+  color: #7c3aed;
+}
+
+/* ===== STAT CARDS GRID ===== */
+.db-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.db-stat-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  padding: 18px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  transition: box-shadow 0.2s, transform 0.2s;
+  border-left: 4px solid transparent;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.db-stat-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.db-stat-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.db-stat-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.db-stat-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #64748b;
+  margin: 0 0 6px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.db-stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+  line-height: 1.1;
+}
+
+/* ===== CHARTS ROW ===== */
+.db-charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.db-chart-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  padding: 20px;
+  overflow: hidden;
+}
+
+.db-chart-title {
+  margin: 0 0 16px 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.db-chart-wrap {
+  height: 300px;
+}
+
+/* ===== TABLE SECTION ===== */
+.db-section {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  padding: 20px;
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+
+.db-section-title {
+  margin: 0 0 16px 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.db-badge-count {
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ===== BUSINESS REPORT ===== */
+.db-report-wrap {
+  margin-top: 28px;
+}
+
+.db-report-header {
+  background: linear-gradient(135deg, #1a0533, #2d1b69);
+  color: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(26, 5, 51, 0.25);
+}
+
+.db-report-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.db-report-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.db-report-filters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.db-report-date-input {
+  padding: 7px 12px;
+  border-radius: 6px;
+  border: none;
+  font-size: 13px;
+  color: #334155;
+  background: #fff;
+  outline: none;
+}
+
+.db-report-date-sep {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.db-report-btn-apply {
+  padding: 7px 18px;
+  background: #7c3aed;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.db-report-btn-apply:hover {
+  background: #6d28d9;
+}
+
+.db-report-btn-reset {
+  padding: 7px 14px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.db-report-btn-reset:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Summary Cards */
+.db-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.db-summary-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  backdrop-filter: blur(4px);
+  transition: background 0.2s;
+}
+
+.db-summary-card:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.db-summary-label {
+  font-size: 11px;
+  color: #c4b5d8;
+  margin-bottom: 6px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.db-summary-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.db-summary-value.green { color: #34d399; }
+.db-summary-value.yellow { color: #fbbf24; }
+.db-summary-value.purple { color: #a78bfa; }
+
+/* Money Flow */
+.db-money-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.db-money-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  padding: 20px;
+  border-top: 4px solid transparent;
+}
+
+.db-money-card.income { border-top-color: #10b981; }
+.db-money-card.commission { border-top-color: #f59e0b; }
+.db-money-card.expenses { border-top-color: #ef4444; }
+
+.db-money-title {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.db-money-title.income { color: #059669; }
+.db-money-title.commission { color: #d97706; }
+.db-money-title.expenses { color: #dc2626; }
+
+.db-money-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.db-money-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.db-money-row-label {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.db-money-row-value {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+.db-money-row-value.income { color: #059669; }
+.db-money-row-value.commission { color: #d97706; }
+.db-money-row-value.expenses { color: #dc2626; }
+.db-money-row-value.warning { color: #f59e0b; }
+
+.db-money-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-top: 6px;
+}
+
+.db-money-total.income { background: #f0fdf4; }
+.db-money-total.commission { background: #fffbeb; }
+
+.db-money-total-label {
+  font-weight: 700;
+  font-size: 13.5px;
+}
+
+.db-money-total-label.income { color: #059669; }
+.db-money-total-label.commission { color: #d97706; }
+
+.db-money-total-value {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.db-money-total-value.income { color: #059669; }
+.db-money-total-value.commission { color: #d97706; }
+
+/* Transaction type badges */
+.db-txn-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.db-txn-badge.chat { background: #eff6ff; color: #2563eb; }
+.db-txn-badge.call { background: #f0fdf4; color: #059669; }
+.db-txn-badge.other { background: #fef3c7; color: #d97706; }
+
+.db-txn-amount {
+  font-weight: 600;
+  color: #059669;
+}
+
+.db-no-data {
+  text-align: center;
+  color: #9ca3af;
+  padding: 24px !important;
+  font-size: 13.5px;
+}
+
+/* ===== LOADER STATE ===== */
+.db-loader-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+}
+
+.db-error-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+  color: #94a3b8;
+  font-size: 15px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+  .db-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .db-stat-card {
+    padding: 14px 12px;
+    gap: 10px;
+  }
+
+  .db-stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+  }
+
+  .db-stat-value {
+    font-size: 18px;
+  }
+
+  .db-stat-title {
+    font-size: 9.5px;
+  }
+
+  .db-charts-row {
+    grid-template-columns: 1fr;
+  }
+
+  .db-chart-wrap {
+    height: 250px;
+  }
+
+  .db-report-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .db-report-filters {
+    flex-wrap: wrap;
+  }
+
+  .db-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .db-summary-value {
+    font-size: 20px;
+  }
+
+  .db-money-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .db-section {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .db-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .db-stat-card {
+    padding: 12px 10px;
+    gap: 8px;
+  }
+
+  .db-stat-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .db-stat-value {
+    font-size: 16px;
+  }
+
+  .db-summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .db-report-filters {
+    width: 100%;
+  }
+
+  .db-report-date-input {
+    flex: 1;
+    min-width: 0;
+  }
+}

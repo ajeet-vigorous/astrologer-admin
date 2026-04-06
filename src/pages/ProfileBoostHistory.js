@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import DataTable from '../components/DataTable';
 import { profileBoostApi } from '../api/services';
+import Loader from '../components/Loader';
+import { History, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import '../styles/Customers.css';
 
 const ProfileBoostHistory = () => {
   const [data, setData] = useState([]);
@@ -8,81 +10,112 @@ const ProfileBoostHistory = () => {
   const [page, setPage] = useState(1);
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
+  const [loading, setLoading] = useState(true);
 
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const years = [];
   for (let y = 2020; y <= new Date().getFullYear(); y++) years.push(y);
 
   const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await profileBoostApi.getHistory({ page, month, year });
       setData(res.data.boosted || []);
       setPagination({ totalPages: res.data.totalPages, totalRecords: res.data.totalRecords, start: res.data.start, end: res.data.end, page: res.data.page });
     } catch (err) { console.error(err); }
+    setLoading(false);
   }, [page, month, year]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const formatDate = (dt) => {
-    if (!dt) return '--';
+    if (!dt) return '-';
     const d = new Date(dt);
     return d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
-  const columns = [
-    { header: '#', render: (_, i) => (pagination?.start || 0) + i },
-    {
-      header: 'Astrologer Name', render: (row) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden' }}>
-            <img src={row.profileImage?.startsWith('http') ? row.profileImage : '/' + (row.profileImage || '')} alt=""
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              onError={(e) => { e.target.src = '/build/assets/images/person.png'; }} />
-          </div>
-          <span>{row.name || '--'}</span>
+  const fallbackSvg = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect width="36" height="36" fill="%23e5e7eb" rx="18"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="14" fill="%23999">?</text></svg>';
+
+  const renderPagination = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+    const pages = [];
+    for (let i = 1; i <= Math.min(pagination.totalPages, 15); i++) pages.push(i);
+    return (
+      <div className="cust-pagination">
+        <span className="cust-page-info">Showing {pagination.start} to {pagination.end} of {pagination.totalRecords}</span>
+        <div className="cust-page-btns">
+          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="cust-page-btn"><ChevronLeft size={14} /></button>
+          {pages.map(p => <button key={p} onClick={() => setPage(p)} className={`cust-page-btn ${p === page ? 'active' : ''}`}>{p}</button>)}
+          <button onClick={() => setPage(Math.min(pagination.totalPages, page + 1))} disabled={page >= pagination.totalPages} className="cust-page-btn"><ChevronRight size={14} /></button>
         </div>
-      )
-    },
-    { header: 'Boost Start Time', render: (row) => <div style={{ textAlign: 'center' }}>{formatDate(row.boosted_datetime)}</div> },
-    { header: 'Boost End Time', render: (row) => <div style={{ textAlign: 'center' }}>{formatDate(row.enddate_time)}</div> },
-    {
-      header: 'Monthly Boost Count', render: (row) => (
-        <div style={{ textAlign: 'center' }}>
-          <span style={{ fontSize: 18 }}>{row.monthly_boost_count}</span><br />
-          <span style={{ fontSize: 12, color: '#6b7280' }}>{row.monthname} {row.yearname}</span>
-        </div>
-      )
-    }
-  ];
+      </div>
+    );
+  };
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <select value={month} onChange={e => { setMonth(e.target.value); setPage(1); }} style={styles.select}>
-          <option value="">Select Month</option>
-          {months.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-        </select>
-        <select value={year} onChange={e => { setYear(e.target.value); setPage(1); }} style={styles.select}>
-          <option value="">Select Year</option>
-          {years.map(y => <option key={y} value={y}>{y}</option>)}
-        </select>
-        <button onClick={() => { setPage(1); fetchData(); }} style={styles.filterBtn}>Filter</button>
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <History size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Boost History</h2>
+            {pagination && <div className="cust-count">{pagination.totalRecords} total</div>}
+          </div>
+        </div>
       </div>
 
-      <DataTable
-        title="Profile Boost History"
-        columns={columns}
-        data={data}
-        pagination={pagination}
-        onPageChange={setPage}
-      />
+      <div className="cust-filterbar">
+        <div className="cust-filter-group">
+          <label className="cust-filter-label">Month</label>
+          <select value={month} onChange={e => { setMonth(e.target.value); setPage(1); }} className="cust-input" style={{ width: 160 }}>
+            {months.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+          </select>
+        </div>
+        <div className="cust-filter-group">
+          <label className="cust-filter-label">Year</label>
+          <select value={year} onChange={e => { setYear(e.target.value); setPage(1); }} className="cust-input" style={{ width: 120 }}>
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+        <div className="cust-filter-actions">
+          <button onClick={() => { setPage(1); fetchData(); }} className="cust-btn cust-btn-primary"><Search size={13} /> Filter</button>
+        </div>
+      </div>
+
+      <div className="cust-card">
+        {loading ? <Loader text="Loading boost history..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead><tr><th>#</th><th>Astrologer</th><th>Boost Start</th><th>Boost End</th><th>Monthly Count</th></tr></thead>
+              <tbody>
+                {data.length === 0 ? (
+                  <tr><td colSpan={5} className="cust-no-data">No boost history found.</td></tr>
+                ) : data.map((row, i) => (
+                  <tr key={row.id || i}>
+                    <td>{(pagination?.start || 1) + i}</td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <img src={row.profileImage?.startsWith('http') ? row.profileImage : fallbackSvg} alt=""
+                          className="cust-avatar" onError={e => { e.target.src = fallbackSvg; }} />
+                        <span className="cust-name-cell">{row.name || '-'}</span>
+                      </div>
+                    </td>
+                    <td className="cust-date-cell">{formatDate(row.boosted_datetime)}</td>
+                    <td className="cust-date-cell">{formatDate(row.enddate_time)}</td>
+                    <td>
+                      <span className="cust-req-badge purple">{row.monthly_boost_count}</span>
+                      <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 4 }}>{row.monthname} {row.yearname}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {renderPagination()}
+      </div>
     </div>
   );
-};
-
-const styles = {
-  select: { padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14 },
-  filterBtn: { background: '#3b82f6', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }
 };
 
 export default ProfileBoostHistory;

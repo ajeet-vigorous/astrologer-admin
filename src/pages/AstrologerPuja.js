@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { pujaApi } from '../api/services';
+import Loader from '../components/Loader';
+import { HandHeart, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import '../styles/Customers.css';
+
+import getImgSrc from '../utils/getImageUrl';
 
 const AstrologerPuja = () => {
   const [data, setData] = useState([]);
@@ -58,13 +63,6 @@ const AstrologerPuja = () => {
     } catch (err) { console.error(err); }
   };
 
-  const isDatePassed = (datetime) => datetime && new Date() > new Date(datetime);
-
-  const getImgSrc = (img) => {
-    if (!img) return null;
-    if (img.startsWith('http')) return img;
-    return '/' + img;
-  };
 
   const getPujaImages = (row) => {
     if (!row.puja_images || !Array.isArray(row.puja_images)) return [];
@@ -95,125 +93,161 @@ const AstrologerPuja = () => {
 
   const getNewStatus = (s) => (s === 'Pending' || s === 'Rejected') ? 'Approved' : 'Rejected';
 
+  const getStatusClass = (status) => {
+    if (status === 'Approved') return 'verified';
+    if (status === 'Rejected') return 'unverified';
+    return 'unverified';
+  };
+
   const renderPagination = () => {
+    if (totalPages <= 1) return null;
+    const total = totalPages;
     const pages = [];
-    for (let i = 1; i <= totalPages; i++) pages.push(i);
+
+    if (total <= 7) {
+      for (let i = 1; i <= total; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (page > 3) pages.push('dots-start');
+      for (let i = Math.max(2, page - 1); i <= Math.min(total - 1, page + 1); i++) pages.push(i);
+      if (page < total - 2) pages.push('dots-end');
+      pages.push(total);
+    }
+
     return (
-      <div style={styles.paginationWrapper}>
-        <div style={styles.showingText}>
-          Showing {totalRecords === 0 ? 0 : start} to {end} of {totalRecords} entries
-        </div>
-        <div style={styles.paginationButtons}>
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            style={{ ...styles.pageBtn, ...(page === 1 ? styles.pageBtnDisabled : {}) }}>Prev</button>
-          {pages.map(p => (
-            <button key={p} onClick={() => setPage(p)}
-              style={{ ...styles.pageBtn, ...(p === page ? styles.pageBtnActive : {}) }}>{p}</button>
-          ))}
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-            style={{ ...styles.pageBtn, ...(page === totalPages ? styles.pageBtnDisabled : {}) }}>Next</button>
+      <div className="cust-pagination">
+        <span className="cust-page-info">Showing {totalRecords === 0 ? 0 : start} to {end} of {totalRecords} entries</span>
+        <div className="cust-page-btns">
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="cust-page-btn"><ChevronLeft size={14} /></button>
+          {pages.map((p, idx) =>
+            typeof p === 'string' ? (
+              <span key={p} className="cust-page-dots">...</span>
+            ) : (
+              <button key={idx} onClick={() => setPage(p)} className={`cust-page-btn ${p === page ? 'active' : ''}`}>{p}</button>
+            )
+          )}
+          <button onClick={() => setPage(p => Math.min(total, p + 1))} disabled={page >= total} className="cust-page-btn"><ChevronRight size={14} /></button>
         </div>
       </div>
     );
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.header}>
-          <h2 style={styles.title}>Astrologer Puja List</h2>
+    <div>
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <HandHeart size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Astrologer Puja List</h2>
+            <div className="cust-count">{totalRecords} total</div>
+          </div>
         </div>
-
-        {/* Search */}
-        <form onSubmit={handleSearch} style={styles.searchRow}>
-          <input value={searchString} onChange={(e) => setSearchString(e.target.value)}
-            placeholder="Search by astrologer name..." style={styles.searchInput} />
-          <button type="submit" style={styles.searchBtn}>Search</button>
+        <div className="cust-topbar-right">
+          <form onSubmit={handleSearch} className="cust-filter-search">
+            <input
+              value={searchString}
+              onChange={(e) => setSearchString(e.target.value)}
+              placeholder="Search by astrologer name..."
+              className="cust-input"
+            />
+          </form>
+          <button type="submit" onClick={handleSearch} className="cust-btn cust-btn-primary">Search</button>
           {search && (
-            <button type="button" onClick={() => { setSearchString(''); setSearch(''); }}
-              style={styles.clearBtn}>Clear</button>
+            <button type="button" onClick={() => { setSearchString(''); setSearch(''); }} className="cust-btn cust-btn-ghost">Clear</button>
           )}
-        </form>
+        </div>
+      </div>
 
-        <div style={styles.tableWrapper}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                {['#', 'Astrologer', 'Puja Title', 'Puja Image', 'Puja Price', 'Puja Place', 'Puja Start', 'Duration', 'Actions'].map((h, i) => (
-                  <th key={i} style={styles.th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={9} style={styles.noData}>Loading...</td></tr>
-              ) : data.length === 0 ? (
-                <tr><td colSpan={9} style={styles.noData}>No Data Available</td></tr>
-              ) : (
-                data.map((row, index) => {
+      <div className="cust-card">
+        {loading ? <Loader text="Loading astrologer pujas..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Astrologer</th>
+                  <th>Puja Title</th>
+                  <th>Puja Image</th>
+                  <th>Puja Price</th>
+                  <th>Puja Place</th>
+                  <th>Puja Start</th>
+                  <th>Duration</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length === 0 ? (
+                  <tr><td colSpan={9} className="cust-no-data">No Data Available</td></tr>
+                ) : data.map((row, index) => {
                   const images = getPujaImages(row);
                   return (
-                    <tr key={row.id || index} style={index % 2 === 0 ? styles.rowEven : styles.rowOdd}>
-                      <td style={styles.td}>{(page - 1) * 15 + index + 1}</td>
-                      <td style={styles.td}><span style={{ fontWeight: 500 }}>{row.astrologerName || '--'}</span></td>
-                      <td style={styles.td}>{row.puja_title || '--'}</td>
-                      {/* Puja Images with carousel viewer */}
-                      <td style={styles.td}>
+                    <tr key={row.id || index}>
+                      <td>{(page - 1) * 15 + index + 1}</td>
+                      <td className="cust-name-cell">{row.astrologerName || '--'}</td>
+                      <td>{row.puja_title || '--'}</td>
+                      <td>
                         {images.length > 0 ? (
-                          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                            <img src={getImgSrc(images[0])} alt="" style={styles.thumbImg}
+                          <div className="cust-actions">
+                            <img
+                              src={getImgSrc(images[0])}
+                              alt=""
+                              className="cust-avatar"
                               onClick={() => openImageViewer(images, 0)}
-                              onError={(e) => { e.target.src = '/build/assets/images/default.jpg'; }} />
+                              onError={(e) => { e.target.src = '/build/assets/images/default.jpg'; }}
+                            />
                             {images.length > 1 && (
-                              <span style={styles.moreImages} onClick={() => openImageViewer(images, 0)}>
+                              <span className="cust-req-badge purple" onClick={() => openImageViewer(images, 0)}>
                                 +{images.length - 1}
                               </span>
                             )}
                           </div>
                         ) : (
-                          <div style={styles.defaultImgCircle}>
-                            <img src="/build/assets/images/default.jpg" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          </div>
+                          <img src="/build/assets/images/default.jpg" alt="" className="cust-avatar" />
                         )}
                       </td>
-                      <td style={styles.td}>{row.puja_price ? `₹${row.puja_price}` : '--'}</td>
-                      <td style={styles.td}>{row.puja_place || '--'}</td>
-                      <td style={styles.td}>{formatDate(row.puja_start_datetime)}</td>
-                      <td style={styles.td}>{row.puja_duration ? `${row.puja_duration} mins` : '--'}</td>
-                      <td style={styles.td}>
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
-                            background: row.isAdminApproved === 'Approved' ? '#d1fae5' : row.isAdminApproved === 'Rejected' ? '#fee2e2' : '#fef3c7',
-                            color: row.isAdminApproved === 'Approved' ? '#065f46' : row.isAdminApproved === 'Rejected' ? '#991b1b' : '#92400e'
-                          }}>{row.isAdminApproved || 'Pending'}</span>
+                      <td>{row.puja_price ? `₹${row.puja_price}` : '--'}</td>
+                      <td>{row.puja_place || '--'}</td>
+                      <td className="cust-date-cell">{formatDate(row.puja_start_datetime)}</td>
+                      <td>{row.puja_duration ? `${row.puja_duration} mins` : '--'}</td>
+                      <td>
+                        <div className="cust-actions">
+                          <span className={`cust-verify-badge ${getStatusClass(row.isAdminApproved)}`}>
+                            {row.isAdminApproved || 'Pending'}
+                          </span>
                           {row.isAdminApproved !== 'Approved' && (
-                            <button onClick={() => openApprove(row.id, 'Rejected')} style={{ background: '#059669', color: '#fff', border: 'none', padding: '4px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>Approve</button>
+                            <button onClick={() => openApprove(row.id, 'Rejected')} className="cust-btn cust-btn-success">Approve</button>
                           )}
                           {row.isAdminApproved !== 'Rejected' && (
-                            <button onClick={() => openApprove(row.id, 'Approved')} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '4px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>Reject</button>
+                            <button onClick={() => openApprove(row.id, 'Approved')} className="cust-btn cust-btn-danger">Reject</button>
                           )}
                         </div>
                       </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
         {renderPagination()}
       </div>
 
       {/* Approve/Reject Modal */}
       {showApproveModal && (
-        <div style={styles.overlay} onClick={() => setShowApproveModal(false)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, textAlign: 'center' }}>Are You Sure?</h3>
-            <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 8 }}>You want to {getNewStatus(approveStatus)}?</p>
-            <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center', gap: 10 }}>
-              <button onClick={handleApprove} style={styles.approveBtn}>Yes, {getNewStatus(approveStatus)} it!</button>
-              <button onClick={() => setShowApproveModal(false)} style={styles.cancelBtn}>Cancel</button>
+        <div className="cust-overlay" onClick={() => setShowApproveModal(false)}>
+          <div className="cust-modal cust-modal-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Are You Sure?</h3>
+              <button className="cust-modal-close" onClick={() => setShowApproveModal(false)}><X size={18} /></button>
+            </div>
+            <div className="cust-modal-body">
+              <div className="cust-delete-content">
+                <p>You want to {getNewStatus(approveStatus)}?</p>
+                <div className="cust-delete-actions">
+                  <button onClick={handleApprove} className="cust-btn cust-btn-primary">Yes, {getNewStatus(approveStatus)} it!</button>
+                  <button onClick={() => setShowApproveModal(false)} className="cust-btn cust-btn-ghost">Cancel</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -221,63 +255,32 @@ const AstrologerPuja = () => {
 
       {/* Image Viewer with Navigation */}
       {viewerImages.length > 0 && (
-        <div style={styles.overlay} onClick={() => setViewerImages([])}>
-          <div style={styles.viewerContent} onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setViewerImages([])} style={styles.closeBtn}>✕</button>
-            {viewerImages.length > 1 && (
-              <button onClick={() => setViewerIndex(i => (i - 1 + viewerImages.length) % viewerImages.length)}
-                style={{ ...styles.navBtn, left: 10 }}>&#8249;</button>
-            )}
-            <img src={viewerImages[viewerIndex]} alt="" style={styles.viewerImg}
-              onError={(e) => { e.target.src = '/build/assets/images/default.jpg'; }} />
-            {viewerImages.length > 1 && (
-              <button onClick={() => setViewerIndex(i => (i + 1) % viewerImages.length)}
-                style={{ ...styles.navBtn, right: 10 }}>&#8250;</button>
-            )}
-            {viewerImages.length > 1 && (
-              <div style={styles.imgCounter}>{viewerIndex + 1} / {viewerImages.length}</div>
-            )}
+        <div className="cust-overlay" onClick={() => setViewerImages([])}>
+          <div className="cust-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Puja Images ({viewerIndex + 1} / {viewerImages.length})</h3>
+              <button className="cust-modal-close" onClick={() => setViewerImages([])}><X size={18} /></button>
+            </div>
+            <div className="cust-modal-body">
+              <div className="cust-delete-content">
+                <img src={viewerImages[viewerIndex]} alt=""
+                  className="cust-img-preview"
+                  onError={(e) => { e.target.src = '/build/assets/images/default.jpg'; }} />
+                {viewerImages.length > 1 && (
+                  <div className="cust-delete-actions">
+                    <button onClick={() => setViewerIndex(i => (i - 1 + viewerImages.length) % viewerImages.length)}
+                      className="cust-btn cust-btn-ghost"><ChevronLeft size={18} /> Prev</button>
+                    <button onClick={() => setViewerIndex(i => (i + 1) % viewerImages.length)}
+                      className="cust-btn cust-btn-ghost">Next <ChevronRight size={18} /></button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
     </div>
   );
-};
-
-const styles = {
-  container: { padding: 0 },
-  card: { background: '#fff', borderRadius: 10, boxShadow: '0 2px 12px rgba(0,0,0,0.07)', padding: 24 },
-  header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15, flexWrap: 'wrap', gap: 12 },
-  title: { margin: 0, fontSize: 22, fontWeight: 700, color: '#1e293b' },
-  searchRow: { display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' },
-  searchInput: { padding: '8px 14px', border: '1px solid #d1d5db', borderRadius: 6, width: 260, fontSize: 14 },
-  searchBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  clearBtn: { background: '#6b7280', color: '#fff', border: 'none', padding: '8px 18px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  tableWrapper: { overflowX: 'auto', width: '100%' },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  th: { background: '#7c3aed', color: '#fff', padding: '12px 14px', textAlign: 'left', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', borderBottom: '2px solid #6d28d9' },
-  td: { padding: '10px 14px', fontSize: 13, color: '#374151', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap', verticalAlign: 'middle' },
-  rowEven: { background: '#f8f9fa' },
-  rowOdd: { background: '#fff' },
-  noData: { padding: '40px 14px', textAlign: 'center', color: '#9ca3af', fontSize: 15 },
-  thumbImg: { width: 44, height: 44, borderRadius: 6, objectFit: 'cover', cursor: 'pointer', border: '1px solid #e5e7eb' },
-  defaultImgCircle: { width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', background: '#e5e7eb' },
-  moreImages: { fontSize: 12, color: '#7c3aed', fontWeight: 600, cursor: 'pointer', background: '#f3f0ff', padding: '2px 8px', borderRadius: 10 },
-  paginationWrapper: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 18, flexWrap: 'wrap', gap: 12 },
-  showingText: { fontSize: 13, color: '#6b7280' },
-  paginationButtons: { display: 'flex', gap: 4, flexWrap: 'wrap' },
-  pageBtn: { padding: '6px 14px', border: '1px solid #d1d5db', borderRadius: 4, background: '#fff', color: '#374151', cursor: 'pointer', fontSize: 13 },
-  pageBtnActive: { background: '#7c3aed', color: '#fff', borderColor: '#7c3aed' },
-  pageBtnDisabled: { opacity: 0.5, cursor: 'not-allowed' },
-  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 },
-  modal: { background: '#fff', borderRadius: 12, padding: 30, maxWidth: 420, width: '90%' },
-  approveBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '8px 22px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  cancelBtn: { background: '#6b7280', color: '#fff', border: 'none', padding: '8px 22px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  viewerContent: { position: 'relative', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  closeBtn: { position: 'absolute', top: -15, right: -15, background: '#fff', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.3)', zIndex: 2 },
-  navBtn: { position: 'absolute', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%', width: 40, height: 40, fontSize: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' },
-  viewerImg: { maxWidth: '85vw', maxHeight: '85vh', borderRadius: 8, objectFit: 'contain' },
-  imgCounter: { position: 'absolute', bottom: -30, left: '50%', transform: 'translateX(-50%)', color: '#fff', fontSize: 14, fontWeight: 600 }
 };
 
 export default AstrologerPuja;

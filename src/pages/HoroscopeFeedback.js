@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { horoscopeApi } from '../api/services';
+import Loader from '../components/Loader';
+import '../styles/Customers.css';
 
 const HoroscopeFeedback = () => {
   const [data, setData] = useState([]);
@@ -57,7 +60,7 @@ const HoroscopeFeedback = () => {
         <img
           src={imgUrl}
           alt="profile"
-          style={styles.profileImg}
+          className="cust-avatar"
           onError={(e) => {
             e.target.style.display = 'none';
             e.target.nextSibling.style.display = 'flex';
@@ -74,23 +77,23 @@ const HoroscopeFeedback = () => {
       pages.push(i);
     }
     return (
-      <div style={styles.paginationWrapper}>
-        <div style={styles.showingText}>
+      <div className="cust-pagination">
+        <div className="cust-page-info">
           Showing {totalRecords === 0 ? 0 : start} to {end} of {totalRecords} entries
         </div>
-        <div style={styles.paginationButtons}>
+        <div className="cust-page-btns">
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
-            style={{ ...styles.pageBtn, ...(page === 1 ? styles.pageBtnDisabled : {}) }}
+            className="cust-page-btn"
           >
-            Prev
+            <ChevronLeft size={16} />
           </button>
           {pages.map(p => (
             <button
               key={p}
               onClick={() => setPage(p)}
-              style={{ ...styles.pageBtn, ...(p === page ? styles.pageBtnActive : {}) }}
+              className={`cust-page-btn${p === page ? ' active' : ''}`}
             >
               {p}
             </button>
@@ -98,9 +101,9 @@ const HoroscopeFeedback = () => {
           <button
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            style={{ ...styles.pageBtn, ...(page === totalPages ? styles.pageBtnDisabled : {}) }}
+            className="cust-page-btn"
           >
-            Next
+            <ChevronRight size={16} />
           </button>
         </div>
       </div>
@@ -108,41 +111,51 @@ const HoroscopeFeedback = () => {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.header}>
-          <h2 style={styles.title}>Horoscope Feedback</h2>
+    <div>
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <Star size={18} className="cust-topbar-icon" />
+          <h2 className="cust-title">Horoscope Feedback</h2>
+          <span className="cust-count">({totalRecords} total)</span>
         </div>
+        <div className="cust-topbar-right" />
+      </div>
 
-        <div style={styles.tableWrapper}>
-          <table style={styles.table}>
+      <div className="cust-card">
+        <div className="cust-table-wrap">
+          <table className="cust-table">
             <thead>
               <tr>
                 {['#', 'Profile', 'User', 'Feedback Date', 'Feedback Type', 'Feedback'].map((h, i) => (
-                  <th key={i} style={styles.th}>{h}</th>
+                  <th key={i}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} style={styles.noData}>Loading...</td>
+                  <td colSpan={6} className="cust-no-data"><Loader /></td>
                 </tr>
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={styles.noData}>No Data Available</td>
+                  <td colSpan={6} className="cust-no-data">No Data Available</td>
                 </tr>
               ) : (
                 data.map((row, index) => (
-                  <tr key={row.id || index} style={index % 2 === 0 ? styles.rowEven : styles.rowOdd}>
-                    <td style={styles.td}>{(page - 1) * 15 + index + 1}</td>
-                    <td style={styles.td}>
-                      <div style={styles.profileWrapper}>
+                  <tr key={row.id || index}>
+                    <td>{(page - 1) * 15 + index + 1}</td>
+                    <td>
+                      <div>
                         {renderProfileImage(row)}
-                        <div style={{
-                          ...styles.profileFallback,
-                          display: (row.profile || row.profileImage || row.profile_image) ? 'none' : 'flex'
-                        }}>
+                        <div
+                          className="cust-avatar"
+                          style={{
+                            display: (row.profile || row.profileImage || row.profile_image) ? 'none' : 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: '#e5e7eb'
+                          }}
+                        >
                           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                             <circle cx="12" cy="7" r="4" />
@@ -150,10 +163,10 @@ const HoroscopeFeedback = () => {
                         </div>
                       </div>
                     </td>
-                    <td style={styles.td}>{getUserDisplay(row)}</td>
-                    <td style={styles.td}>{formatDate(row.feedbackDate || row.feedback_date || row.created_at)}</td>
-                    <td style={styles.td}>{row.feedbacktype || row.feedbackType || row.feedback_type || '-'}</td>
-                    <td style={{ ...styles.td, whiteSpace: 'normal', maxWidth: '300px' }}>{row.feedback || '-'}</td>
+                    <td className="cust-name-cell">{getUserDisplay(row)}</td>
+                    <td className="cust-date-cell">{formatDate(row.feedbackDate || row.feedback_date || row.created_at)}</td>
+                    <td>{row.feedbacktype || row.feedbackType || row.feedback_type || '-'}</td>
+                    <td>{row.feedback || '-'}</td>
                   </tr>
                 ))
               )}
@@ -165,124 +178,6 @@ const HoroscopeFeedback = () => {
       </div>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    padding: '0',
-  },
-  card: {
-    background: '#fff',
-    borderRadius: '10px',
-    boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-    padding: '24px',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: '20px',
-    flexWrap: 'wrap',
-    gap: '12px',
-  },
-  title: {
-    margin: 0,
-    fontSize: '22px',
-    fontWeight: 700,
-    color: '#1e293b',
-  },
-  tableWrapper: {
-    overflowX: 'auto',
-    width: '100%',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-  },
-  th: {
-    background: '#7c3aed',
-    color: '#fff',
-    padding: '12px 14px',
-    textAlign: 'left',
-    fontSize: '13px',
-    fontWeight: 600,
-    whiteSpace: 'nowrap',
-    borderBottom: '2px solid #6d28d9',
-  },
-  td: {
-    padding: '10px 14px',
-    fontSize: '13px',
-    color: '#374151',
-    borderBottom: '1px solid #e5e7eb',
-    whiteSpace: 'nowrap',
-    verticalAlign: 'middle',
-  },
-  rowEven: {
-    background: '#f8f9fa',
-  },
-  rowOdd: {
-    background: '#fff',
-  },
-  noData: {
-    padding: '40px 14px',
-    textAlign: 'center',
-    color: '#9ca3af',
-    fontSize: '15px',
-  },
-  profileWrapper: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileImg: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '50%',
-    objectFit: 'cover',
-  },
-  profileFallback: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '50%',
-    background: '#e5e7eb',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  paginationWrapper: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: '18px',
-    flexWrap: 'wrap',
-    gap: '12px',
-  },
-  showingText: {
-    fontSize: '13px',
-    color: '#6b7280',
-  },
-  paginationButtons: {
-    display: 'flex',
-    gap: '4px',
-    flexWrap: 'wrap',
-  },
-  pageBtn: {
-    padding: '6px 14px',
-    border: '1px solid #d1d5db',
-    borderRadius: '4px',
-    background: '#fff',
-    color: '#374151',
-    cursor: 'pointer',
-    fontSize: '13px',
-  },
-  pageBtnActive: {
-    background: '#7c3aed',
-    color: '#fff',
-    borderColor: '#7c3aed',
-  },
-  pageBtnDisabled: {
-    opacity: 0.5,
-    cursor: 'not-allowed',
-  },
 };
 
 export default HoroscopeFeedback;

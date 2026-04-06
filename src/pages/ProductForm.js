@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { ShoppingBag, Trash2 } from 'lucide-react';
 import { astroMallApi } from '../api/services';
+import Loader from '../components/Loader';
+import '../styles/AstrologerForm.css';
 
 const ProductForm = () => {
   const { id } = useParams();
@@ -108,36 +111,40 @@ const ProductForm = () => {
     }
   };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>Loading...</div>;
+  if (loading) return <Loader text="Loading..." />;
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      <div style={styles.card}>
-        <div style={styles.cardHeader}>
-          <h2 style={{ margin: 0, fontSize: 20, color: '#1f2937' }}>{isEdit ? 'Edit Product' : 'Add Product'}</h2>
-        </div>
-        <form onSubmit={handleSubmit} style={{ padding: 20 }}>
-          {/* Row 1: Name + Category */}
-          <div style={styles.grid2}>
-            <div>
-              <label style={styles.label}>Name <span style={{ color: 'red' }}>*</span></label>
+    <div className="af-page">
+      <div className="af-header">
+        <ShoppingBag size={22} color="#7c3aed" />
+        <h2 className="af-title">{isEdit ? 'Edit Product' : 'Add Product'}</h2>
+      </div>
+
+      <div className="af-card" style={{ borderRadius: 12 }}>
+        <form onSubmit={handleSubmit}>
+          <div className="af-grid">
+            {/* Name */}
+            <div className="af-field">
+              <label className="af-label">Name <span className="af-req">*</span></label>
               <input
                 type="text"
                 name="name"
                 value={form.name}
                 onChange={handleChange}
-                style={styles.input}
+                className="af-input"
                 placeholder="Enter product name"
                 required
               />
             </div>
-            <div>
-              <label style={styles.label}>Product Category <span style={{ color: 'red' }}>*</span></label>
+
+            {/* Category */}
+            <div className="af-field">
+              <label className="af-label">Product Category <span className="af-req">*</span></label>
               <select
                 name="productCategoryId"
                 value={form.productCategoryId}
                 onChange={handleChange}
-                style={styles.input}
+                className="af-select"
                 required
               >
                 <option value="">Select Category</option>
@@ -146,109 +153,113 @@ const ProductForm = () => {
                 ))}
               </select>
             </div>
-          </div>
 
-          {/* Row 2: Amount INR + Amount USD */}
-          <div style={{ ...styles.grid2, marginTop: 15 }}>
-            <div>
-              <label style={styles.label}>Amount (INR) <span style={{ color: 'red' }}>*</span></label>
+            {/* Amount INR */}
+            <div className="af-field">
+              <label className="af-label">Amount (INR) <span className="af-req">*</span></label>
               <input
                 type="number"
                 name="amount"
                 value={form.amount}
                 onChange={handleChange}
-                style={styles.input}
+                className="af-input"
                 placeholder="Enter INR amount"
                 required
               />
             </div>
-            <div>
-              <label style={styles.label}>Amount (USD)</label>
+
+            {/* Amount USD */}
+            <div className="af-field">
+              <label className="af-label">Amount (USD)</label>
               <input
                 type="number"
                 name="usd_amount"
                 value={form.usd_amount}
                 onChange={handleChange}
-                style={styles.input}
+                className="af-input"
                 placeholder="Enter USD amount"
               />
             </div>
-          </div>
 
-          {/* Row 3: Features */}
-          <div style={{ marginTop: 15 }}>
-            <label style={styles.label}>Features</label>
-            <textarea
-              name="features"
-              value={form.features}
-              onChange={handleChange}
-              style={{ ...styles.input, minHeight: 100, resize: 'vertical' }}
-              placeholder="Enter features"
-            />
-          </div>
+            {/* Features */}
+            <div className="af-field af-full">
+              <label className="af-label">Features</label>
+              <textarea
+                name="features"
+                value={form.features}
+                onChange={handleChange}
+                className="af-textarea"
+                placeholder="Enter features"
+              />
+            </div>
 
-          {/* Row 4: Product Image */}
-          <div style={{ marginTop: 15 }}>
-            <label style={styles.label}>Product Image</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              style={styles.input}
-            />
-            {(imagePreview || existingImage) && (
-              <div style={{ marginTop: 10 }}>
-                <img
-                  src={imagePreview || existingImage}
-                  alt="Preview"
-                  style={{ width: 150, height: 150, objectFit: 'cover', borderRadius: 8, border: '1px solid #e5e7eb' }}
-                  onError={(e) => { e.target.style.display = 'none'; }}
+            {/* Product Image */}
+            <div className="af-field af-full">
+              <label className="af-label">Product Image</label>
+              <div className="af-img-upload">
+                {(imagePreview || existingImage) && (
+                  <img
+                    src={imagePreview || existingImage}
+                    alt="Preview"
+                    className="af-img-preview"
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="af-input"
                 />
               </div>
-            )}
+            </div>
           </div>
 
           {/* FAQs section (only for edit) */}
           {isEdit && faqs.length > 0 && (
-            <div style={{ marginTop: 20, border: '1px solid #d1d5db', borderRadius: 8, padding: 15 }}>
-              <h3 style={{ margin: '0 0 15px', fontSize: 16, color: '#374151' }}>FAQs</h3>
-              {faqs.map((faq, idx) => (
-                <div key={faq.id || idx} style={styles.faqCard}>
-                  <div style={{ flex: 1 }}>
-                    <div style={styles.formGroup}>
-                      <label style={styles.faqLabel}>Question</label>
-                      <input
-                        type="text"
-                        value={faq.question || ''}
-                        readOnly
-                        style={{ ...styles.input, background: '#f9fafb' }}
-                      />
+            <div style={{ marginTop: 20 }}>
+              <div className="af-section-title">FAQs</div>
+              <div className="af-grid" style={{ marginTop: 12 }}>
+                {faqs.map((faq, idx) => (
+                  <div key={faq.id || idx} className="af-field" style={{ background: '#f8fafc', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                      <label className="af-label" style={{ margin: 0 }}>Question</label>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFaq(idx)}
+                        className="af-slot-remove"
+                        style={{ marginTop: 0 }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
-                    <div style={styles.formGroup}>
-                      <label style={styles.faqLabel}>Answer</label>
-                      <input
-                        type="text"
-                        value={faq.answer || ''}
-                        readOnly
-                        style={{ ...styles.input, background: '#f9fafb' }}
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      value={faq.question || ''}
+                      readOnly
+                      className="af-input"
+                      style={{ background: '#fff', marginBottom: 10 }}
+                    />
+                    <label className="af-label">Answer</label>
+                    <input
+                      type="text"
+                      value={faq.answer || ''}
+                      readOnly
+                      className="af-input"
+                      style={{ background: '#fff' }}
+                    />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveFaq(idx)}
-                    style={styles.removeBtn}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
 
-          {/* Submit */}
-          <div style={{ marginTop: 20 }}>
-            <button type="submit" style={styles.submitBtn}>
+          {/* Footer */}
+          <div className="af-footer">
+            <button type="button" className="af-btn-cancel" onClick={() => navigate('/admin/astromall/products')}>
+              Cancel
+            </button>
+            <button type="submit" className="af-btn-submit">
               {isEdit ? 'Save' : 'Add Product'}
             </button>
           </div>
@@ -256,19 +267,6 @@ const ProductForm = () => {
       </div>
     </div>
   );
-};
-
-const styles = {
-  card: { background: '#fff', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' },
-  cardHeader: { padding: '15px 20px', borderBottom: '1px solid #e5e7eb', background: '#f8f9fa' },
-  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 },
-  label: { display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 14, color: '#374151' },
-  input: { width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' },
-  formGroup: { marginBottom: 10 },
-  faqCard: { display: 'flex', gap: 15, alignItems: 'flex-start', padding: 12, border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 10 },
-  faqLabel: { display: 'block', fontWeight: 500, marginBottom: 4, fontSize: 13, color: '#6b7280' },
-  removeBtn: { background: '#ef4444', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', marginTop: 20 },
-  submitBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '12px 30px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 15 }
 };
 
 export default ProductForm;

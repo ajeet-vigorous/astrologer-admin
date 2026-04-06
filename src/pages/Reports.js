@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import DataTable from '../components/DataTable';
-import Modal from '../components/Modal';
-import FormInput from '../components/FormInput';
-import StatusBadge from '../components/StatusBadge';
 import { reportApi } from '../api/services';
+import Loader from '../components/Loader';
+import { FileText, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import Swal from 'sweetalert2';
+import '../styles/Customers.css';
 
 const Reports = () => {
   const [data, setData] = useState([]);
@@ -22,7 +22,8 @@ const Reports = () => {
     setLoading(true);
     try {
       const res = await reportApi.getAll({ page, search });
-      setData(res.data.data || []);
+      const d = res.data.data || res.data.reports || res.data.result || [];
+      setData(Array.isArray(d) ? d : []);
       setPagination(res.data.pagination || null);
     } catch (err) {
       console.error('Error fetching report types:', err);
@@ -85,61 +86,167 @@ const Reports = () => {
     }
   };
 
-  const columns = [
-    { header: '#', render: (row, i) => ((page - 1) * 10) + i + 1 },
-    { header: 'Title', key: 'title' },
-    {
-      header: 'Image',
-      render: (row) => row.reportImage ? (
-        <img src={row.reportImage} alt={row.title} style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: '6px' }} />
-      ) : '-'
-    },
-    {
-      header: 'Status',
-      render: (row) => (
-        <span onClick={() => handleStatusToggle(row)} style={{ cursor: 'pointer' }}>
-          <StatusBadge active={row.status === 1} />
-        </span>
-      )
-    },
-    {
-      header: 'Actions',
-      render: (row) => (
-        <button onClick={() => openEdit(row)} style={{ padding: '4px 12px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Edit</button>
-      )
+  const handleDelete = async (id) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'This report type will be deleted!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#7c3aed',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, Delete',
+      cancelButtonText: 'Cancel',
+    });
+    if (result.isConfirmed) {
+      try {
+        await reportApi.delete({ del_id: id });
+        Swal.fire({ title: 'Deleted!', icon: 'success', confirmButtonColor: '#7c3aed', timer: 1500, showConfirmButton: false });
+        fetchData();
+      } catch (e) {
+        Swal.fire({ title: 'Error!', text: 'Failed to delete', icon: 'error', confirmButtonColor: '#7c3aed' });
+      }
     }
-  ];
+  };
+
+  const getPageNumbers = () => {
+    if (!pagination) return [];
+    const total = pagination.totalPages;
+    const current = page;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages = [];
+    pages.push(1);
+    if (current > 3) pages.push('...');
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+    return pages;
+  };
+
+  const renderPagination = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+    const pages = getPageNumbers();
+    return (
+      <div className="cust-pagination">
+        <span className="cust-page-info">
+          Showing {((page - 1) * 10) + 1} to {Math.min(page * 10, pagination.totalRecords || 0)} of {pagination.totalRecords || 0}
+        </span>
+        <div className="cust-page-btns">
+          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="cust-page-btn">
+            <ChevronLeft size={14} />
+          </button>
+          {pages.map((p, idx) =>
+            p === '...' ? (
+              <span key={`dots-${idx}`} className="cust-page-dots">...</span>
+            ) : (
+              <button key={p} onClick={() => setPage(p)} className={`cust-page-btn ${p === page ? 'active' : ''}`}>{p}</button>
+            )
+          )}
+          <button onClick={() => setPage(Math.min(pagination.totalPages, page + 1))} disabled={page >= pagination.totalPages} className="cust-page-btn">
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div>
-      <DataTable
-        title="Report Types"
-        columns={columns}
-        data={data}
-        pagination={pagination}
-        onPageChange={setPage}
-        onSearch={setSearch}
-        searchValue={search}
-        headerActions={
-          <button onClick={openAdd} style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>+ Add Report Type</button>
-        }
-      />
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editData ? 'Edit Report Type' : 'Add Report Type'}>
-        <form onSubmit={handleSubmit}>
-          <FormInput label="Title" name="title" value={form.title} onChange={handleChange} required placeholder="Enter title" />
-          <FormInput label="Report Image" type="file" name="reportImage" onChange={handleChange} />
-          {editData && editData.reportImage && (
-            <div style={{ marginBottom: '10px' }}>
-              <label style={{ fontSize: '13px', color: '#555' }}>Current Image:</label>
-              <img src={editData.reportImage} alt="current" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: '6px', display: 'block', marginTop: '5px' }} />
-            </div>
-          )}
-          <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-            <button type="submit" style={{ padding: '10px 24px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>{editData ? 'Update' : 'Add'}</button>
-            <button type="button" onClick={() => setShowModal(false)} style={{ padding: '10px 24px', background: '#6b7280', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <FileText size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Report Types</h2>
+            {pagination && <div className="cust-count">{pagination.totalRecords || 0} total</div>}
           </div>
-        </form>
-      </Modal>
+        </div>
+        <div className="cust-topbar-right">
+          <button onClick={openAdd} className="cust-btn cust-btn-primary">
+            <Plus size={15} /> Add Report Type
+          </button>
+        </div>
+      </div>
+
+      <div className="cust-card">
+        {loading ? <Loader text="Loading report types..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Title</th>
+                  <th>Image</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length === 0 ? (
+                  <tr><td colSpan={5} className="cust-no-data">No report types found.</td></tr>
+                ) : data.map((row, i) => (
+                  <tr key={row.id}>
+                    <td>{((page - 1) * 10) + i + 1}</td>
+                    <td className="cust-name-cell">{row.title}</td>
+                    <td>
+                      {row.reportImage ? (
+                        <img src={row.reportImage} alt={row.title} className="cust-avatar" />
+                      ) : '-'}
+                    </td>
+                    <td>
+                      <span
+                        onClick={() => handleStatusToggle(row)}
+                        className={`cust-verify-badge ${row.status === 1 ? 'verified' : 'unverified'}`}
+                      >
+                        {row.status === 1 ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="cust-actions">
+                        <button onClick={() => openEdit(row)} className="cust-action-btn cust-action-edit" title="Edit">
+                          <Pencil size={15} />
+                        </button>
+                        <button onClick={() => handleDelete(row.id)} className="cust-action-btn cust-action-delete" title="Delete">
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {renderPagination()}
+      </div>
+
+      {showModal && (
+        <div className="cust-overlay" onClick={() => setShowModal(false)}>
+          <div className="cust-modal cust-modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>{editData ? 'Edit Report Type' : 'Add Report Type'}</h3>
+              <button onClick={() => setShowModal(false)} className="cust-modal-close"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSubmit} className="cust-modal-body">
+              <div className="cust-form-group">
+                <label>Title *</label>
+                <input name="title" value={form.title} onChange={handleChange} required placeholder="Enter title" />
+              </div>
+              <div className="cust-form-group">
+                <label>Report Image</label>
+                <input type="file" name="reportImage" onChange={handleChange} accept="image/*" />
+              </div>
+              {editData && editData.reportImage && (
+                <div className="cust-form-group">
+                  <label>Current Image</label>
+                  <img src={editData.reportImage} alt="current" className="cust-img-preview" />
+                </div>
+              )}
+              <button type="submit" className="cust-btn cust-btn-primary cust-btn-full">
+                {editData ? 'Update' : 'Add'} Report Type
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

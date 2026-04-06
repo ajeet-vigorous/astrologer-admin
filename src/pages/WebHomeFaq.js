@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import DataTable from '../components/DataTable';
-import Modal from '../components/Modal';
 import { webHomeFaqApi } from '../api/services';
+import Loader from '../components/Loader';
+import Swal from 'sweetalert2';
+import { CircleHelp, Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import '../styles/Customers.css';
 
 const WebHomeFaq = () => {
   const [data, setData] = useState([]);
@@ -9,33 +11,65 @@ const WebHomeFaq = () => {
   const [page, setPage] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
   const [form, setForm] = useState({ title: '', description: '' });
   const [editForm, setEditForm] = useState({ filed_id: '', title: '', description: '' });
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await webHomeFaqApi.getAll({ page });
       setData(res.data.webfaq || []);
       setPagination({ totalPages: res.data.totalPages, totalRecords: res.data.totalRecords, start: res.data.start, end: res.data.end, page: res.data.page });
     } catch (err) { console.error(err); }
+    setLoading(false);
   }, [page]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleAdd = async (e) => {
     e.preventDefault();
-    try { await webHomeFaqApi.add(form); setShowAddModal(false); setForm({ title: '', description: '' }); fetchData(); } catch (err) { console.error(err); }
+    setSubmitting(true);
+    try {
+      await webHomeFaqApi.add(form);
+      setShowAddModal(false);
+      setForm({ title: '', description: '' });
+      fetchData();
+    } catch (err) { console.error(err); }
+    setSubmitting(false);
   };
 
   const handleEdit = async (e) => {
     e.preventDefault();
-    try { await webHomeFaqApi.edit(editForm); setShowEditModal(false); fetchData(); } catch (err) { console.error(err); }
+    setSubmitting(true);
+    try {
+      await webHomeFaqApi.edit(editForm);
+      setShowEditModal(false);
+      fetchData();
+    } catch (err) { console.error(err); }
+    setSubmitting(false);
   };
 
-  const handleDelete = async () => {
-    try { await webHomeFaqApi.delete({ faq_id: deleteId }); setShowDeleteModal(false); fetchData(); } catch (err) { console.error(err); }
+  const handleDelete = async (id) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'This process cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, Delete'
+    });
+    if (result.isConfirmed) {
+      try {
+        await webHomeFaqApi.delete({ faq_id: id });
+        Swal.fire({ title: 'Deleted!', icon: 'success', confirmButtonColor: '#7c3aed', timer: 1500, showConfirmButton: false });
+        fetchData();
+      } catch (err) {
+        Swal.fire({ title: 'Error!', text: 'Failed to delete', icon: 'error', confirmButtonColor: '#7c3aed' });
+      }
+    }
   };
 
   const truncate = (str, words = 10) => {
@@ -44,60 +78,160 @@ const WebHomeFaq = () => {
     return arr.length > words ? arr.slice(0, words).join(' ') + '...' : str;
   };
 
-  const columns = [
-    { header: '#', render: (_, i) => (pagination?.start || 0) + i },
-    { header: 'Title', render: (row) => <span style={{ fontWeight: 500 }}>{row.title}</span> },
-    { header: 'Description', render: (row) => <span title={row.description} style={{ cursor: 'pointer' }}>{truncate(row.description)}</span> },
-    {
-      header: 'Actions', render: (row) => (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
-          <button onClick={() => { setEditForm({ filed_id: row.id, title: row.title, description: row.description || '' }); setShowEditModal(true); }} style={styles.linkBtn}>Edit</button>
-          <button onClick={() => { setDeleteId(row.id); setShowDeleteModal(true); }} style={{ ...styles.linkBtn, color: '#ef4444' }}>Delete</button>
-        </div>
-      )
+  const renderPagination = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+    const total = pagination.totalPages;
+    const current = page;
+    let pages = [];
+
+    if (total <= 7) {
+      for (let i = 1; i <= total; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (current > 3) pages.push('dots-start');
+      for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+        pages.push(i);
+      }
+      if (current < total - 2) pages.push('dots-end');
+      pages.push(total);
     }
-  ];
+
+    return (
+      <div className="cust-pagination">
+        <span className="cust-page-info">
+          Showing {pagination.start} to {pagination.end} of {pagination.totalRecords} entries
+        </span>
+        <div className="cust-page-btns">
+          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="cust-page-btn">
+            <ChevronLeft size={14} />
+          </button>
+          {pages.map((p, i) =>
+            typeof p === 'string' ? (
+              <span key={p} className="cust-page-dots">...</span>
+            ) : (
+              <button key={p} onClick={() => setPage(p)} className={`cust-page-btn ${p === current ? 'active' : ''}`}>
+                {p}
+              </button>
+            )
+          )}
+          <button onClick={() => setPage(Math.min(total, page + 1))} disabled={page >= total} className="cust-page-btn">
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div>
-      <DataTable title="Website FAQ's" columns={columns} data={data} pagination={pagination} onPageChange={setPage}
-        headerActions={<button onClick={() => setShowAddModal(true)} style={styles.addBtn}>Add Website Faqs</button>} />
-
-      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Website Faqs">
-        <form onSubmit={handleAdd} style={{ padding: 20 }}>
-          <div style={{ marginBottom: 12 }}><label style={styles.label}>Title *</label><input type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required style={styles.input} placeholder="Add Title" /></div>
-          <div style={{ marginBottom: 12 }}><label style={styles.label}>Description *</label><textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} required style={{ ...styles.input, minHeight: 100 }} /></div>
-          <button type="submit" style={styles.addBtn}>Add Website Faqs</button>
-        </form>
-      </Modal>
-
-      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Edit Website Faqs">
-        <form onSubmit={handleEdit} style={{ padding: 20 }}>
-          <div style={{ marginBottom: 12 }}><label style={styles.label}>Title *</label><input type="text" value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })} required style={styles.input} /></div>
-          <div style={{ marginBottom: 12 }}><label style={styles.label}>Description *</label><textarea value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} required style={{ ...styles.input, minHeight: 100 }} /></div>
-          <button type="submit" style={styles.addBtn}>Save</button>
-        </form>
-      </Modal>
-
-      <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} title="Delete FAQ">
-        <div style={{ textAlign: 'center', padding: 20 }}>
-          <p style={{ fontSize: 18, fontWeight: 600 }}>Are you sure?</p>
-          <p style={{ color: '#6b7280', marginTop: 8 }}>This process cannot be undone.</p>
-          <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center', gap: 10 }}>
-            <button onClick={() => setShowDeleteModal(false)} style={{ ...styles.addBtn, background: '#6b7280' }}>Cancel</button>
-            <button onClick={handleDelete} style={{ ...styles.addBtn, background: '#ef4444' }}>Delete</button>
+      {/* Top Bar */}
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <CircleHelp size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Website FAQ's</h2>
+            {pagination && <div className="cust-count">{pagination.totalRecords} total</div>}
           </div>
         </div>
-      </Modal>
+        <div className="cust-topbar-right">
+          <button onClick={() => { setForm({ title: '', description: '' }); setShowAddModal(true); }} className="cust-btn cust-btn-primary">
+            <Plus size={15} /> Add Website Faqs
+          </button>
+        </div>
+      </div>
+
+      {/* Card + Table */}
+      <div className="cust-card">
+        {loading ? <Loader text="Loading FAQs..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Title</th>
+                  <th>Description</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length === 0 ? (
+                  <tr><td colSpan={4} className="cust-no-data">No FAQs found.</td></tr>
+                ) : data.map((row, i) => (
+                  <tr key={row.id}>
+                    <td>{(pagination?.start || 0) + i}</td>
+                    <td className="cust-name-cell">{row.title}</td>
+                    <td title={row.description}>{truncate(row.description)}</td>
+                    <td>
+                      <div className="cust-actions">
+                        <button onClick={() => { setEditForm({ filed_id: row.id, title: row.title, description: row.description || '' }); setShowEditModal(true); }} className="cust-action-btn cust-action-edit" title="Edit">
+                          <Pencil size={15} />
+                        </button>
+                        <button onClick={() => handleDelete(row.id)} className="cust-action-btn cust-action-delete" title="Delete">
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {renderPagination()}
+      </div>
+
+      {/* Add FAQ Modal */}
+      {showAddModal && (
+        <div className="cust-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="cust-modal" onClick={e => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Add Website Faqs</h3>
+              <button onClick={() => setShowAddModal(false)} className="cust-modal-close"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleAdd} className="cust-modal-body">
+              <div className="cust-form-group">
+                <label>Title *</label>
+                <input type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required placeholder="Add Title" />
+              </div>
+              <div className="cust-form-group">
+                <label>Description *</label>
+                <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} required rows={4} />
+              </div>
+              <button type="submit" disabled={submitting} className="cust-btn cust-btn-primary cust-btn-full">
+                {submitting ? 'Saving...' : 'Add Website Faqs'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit FAQ Modal */}
+      {showEditModal && (
+        <div className="cust-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="cust-modal" onClick={e => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Edit Website Faqs</h3>
+              <button onClick={() => setShowEditModal(false)} className="cust-modal-close"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleEdit} className="cust-modal-body">
+              <div className="cust-form-group">
+                <label>Title *</label>
+                <input type="text" value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })} required />
+              </div>
+              <div className="cust-form-group">
+                <label>Description *</label>
+                <textarea value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} required rows={4} />
+              </div>
+              <button type="submit" disabled={submitting} className="cust-btn cust-btn-primary cust-btn-full">
+                {submitting ? 'Saving...' : 'Save'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
-
-const styles = {
-  addBtn: { background: '#3b82f6', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
-  linkBtn: { background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: 500 },
-  label: { fontSize: 13, fontWeight: 500, display: 'block', marginBottom: 4 },
-  input: { width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }
 };
 
 export default WebHomeFaq;

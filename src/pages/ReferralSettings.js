@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { referralApi } from '../api/services';
+import { Link2 } from 'lucide-react';
+import '../styles/AstrologerForm.css';
 
 const ReferralSettings = () => {
   const [form, setForm] = useState({ id: '', amount: '', amount_usd: '', max_user_limit: '' });
@@ -28,48 +30,61 @@ const ReferralSettings = () => {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.header}>
-          <h2 style={{ margin: 0, fontSize: 16 }}>Edit Referral</h2>
-        </div>
-        <form onSubmit={handleSubmit} style={{ padding: 20 }}>
-          {message && <div style={{ padding: '10px 16px', background: '#dcfce7', color: '#166534', borderRadius: 6, marginBottom: 16 }}>{message}</div>}
-          <div style={styles.row}>
-            <div style={styles.col}>
-              <label style={styles.label}>Amount (INR) <span style={{ color: 'red' }}>*</span></label>
-              <input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })}
-                placeholder="Amount in Inr" required style={styles.input} />
+    <div className="af-page">
+      <div className="af-header">
+        <Link2 size={25} color="#7c3aed" />
+        <h2 className="af-title">Referral Settings</h2>
+      </div>
+
+      <div className="af-card">
+        <form onSubmit={handleSubmit}>
+          {message && (
+            <div className="af-field af-full" >
+              <div className="cust-verify-badge verified">{message}</div>
             </div>
-            <div style={styles.col}>
-              <label style={styles.label}>Amount (USD) <span style={{ color: 'red' }}>*</span></label>
-              <input type="text" value={form.amount_usd} onChange={e => setForm({ ...form, amount_usd: e.target.value })}
-                placeholder="Amount in Usd" required style={styles.input} />
+          )}
+          <div className="af-grid">
+            <div className="af-field">
+              <label className="af-label">Amount (INR) <span className="af-req">*</span></label>
+              <input
+                type="number"
+                className="af-input"
+                value={form.amount}
+                onChange={e => setForm({ ...form, amount: e.target.value })}
+                placeholder="Amount in Inr"
+                required
+              />
             </div>
-            <div style={styles.col}>
-              <label style={styles.label}>Max User Limit <span style={{ color: 'red' }}>*</span></label>
-              <input type="number" value={form.max_user_limit} onChange={e => setForm({ ...form, max_user_limit: e.target.value })}
-                placeholder="Max User Limit" required style={styles.input} />
+            <div className="af-field">
+              <label className="af-label">Amount (USD) <span className="af-req">*</span></label>
+              <input
+                type="text"
+                className="af-input"
+                value={form.amount_usd}
+                onChange={e => setForm({ ...form, amount_usd: e.target.value })}
+                placeholder="Amount in Usd"
+                required
+              />
+            </div>
+            <div className="af-field">
+              <label className="af-label">Max User Limit <span className="af-req">*</span></label>
+              <input
+                type="number"
+                className="af-input"
+                value={form.max_user_limit}
+                onChange={e => setForm({ ...form, max_user_limit: e.target.value })}
+                placeholder="Max User Limit"
+                required
+              />
             </div>
           </div>
-          <div style={{ marginTop: 20 }}>
-            <button type="submit" style={styles.submitBtn}>Update</button>
+          <div className="af-footer">
+            <button type="submit" className="af-btn-submit">Update</button>
           </div>
         </form>
       </div>
     </div>
   );
-};
-
-const styles = {
-  container: { marginTop: 20 },
-  card: { background: '#fff', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' },
-  header: { padding: '16px 20px', borderBottom: '1px solid #e5e7eb' },
-  row: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 },
-  col: { display: 'flex', flexDirection: 'column' },
-  label: { fontSize: 13, fontWeight: 500, marginBottom: 4 },
-  input: { width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' },
-  submitBtn: { background: '#3b82f6', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }
 };
 
 export default ReferralSettings;

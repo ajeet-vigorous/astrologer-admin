@@ -1,14 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { orderApi } from '../api/services';
+import Loader from '../components/Loader';
+import Swal from 'sweetalert2';
+import { ShoppingBag, FileText, FileSpreadsheet, Search, X, ChevronLeft, ChevronRight, Calendar, Download, AlertTriangle } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import moment from 'moment';
+import 'react-datepicker/dist/react-datepicker.css';
+import '../styles/Customers.css';
+
+import getImgSrc from '../utils/getImageUrl';
 
 const Orders = () => {
   const [data, setData] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [searchInput, setSearchInput] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [fromDate, setFromDate] = useState(moment().toDate());
+  const [toDate, setToDate] = useState(moment().toDate());
+  const [dateApplied, setDateApplied] = useState(false);
   const [currencySymbol, setCurrencySymbol] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -27,8 +36,8 @@ const Orders = () => {
     setLoading(true);
     try {
       const params = { page, searchString: search };
-      if (fromDate) params.from_date = fromDate;
-      if (toDate) params.to_date = toDate;
+      if (dateApplied && fromDate) params.from_date = moment(fromDate).format('YYYY-MM-DD');
+      if (dateApplied && toDate) params.to_date = moment(toDate).format('YYYY-MM-DD');
       const res = await orderApi.getAll(params);
       const d = res.data.data || res.data;
       setData(d.orderRequest || []);
@@ -44,29 +53,12 @@ const Orders = () => {
       console.error('Error fetching orders:', err);
     }
     setLoading(false);
-  }, [page, search, fromDate, toDate]);
+  }, [page, search, dateApplied]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleSearch = () => {
-    setPage(1);
-    setSearch(searchInput);
-  };
-
-  const handleSearchKeyDown = (e) => {
-    if (e.key === 'Enter') handleSearch();
-  };
-
-  const handleFilter = () => {
-    setPage(1);
-    fetchData();
-  };
-
-  const handleClear = () => {
-    setFromDate('');
-    setToDate('');
-    setSearchInput('');
-    setSearch('');
+  const handleSearch = (val) => {
+    setSearch(val !== undefined ? val : search);
     setPage(1);
   };
 
@@ -120,7 +112,6 @@ const Orders = () => {
   const handleInvoiceDownload = async (orderId) => {
     try {
       const res = await orderApi.downloadInvoice(orderId);
-      // Open blob or URL in new tab
       if (res.data) {
         const url = typeof res.data === 'string' ? res.data : window.URL.createObjectURL(new Blob([res.data]));
         window.open(url, '_blank');
@@ -133,8 +124,8 @@ const Orders = () => {
   const handlePdf = async () => {
     try {
       const params = { searchString: search };
-      if (fromDate) params.from_date = fromDate;
-      if (toDate) params.to_date = toDate;
+      if (dateApplied && fromDate) params.from_date = moment(fromDate).format('YYYY-MM-DD');
+      if (dateApplied && toDate) params.to_date = moment(toDate).format('YYYY-MM-DD');
       const res = await orderApi.printPdf(params);
       const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
       window.open(url, '_blank');
@@ -146,8 +137,8 @@ const Orders = () => {
   const handleCsv = async () => {
     try {
       const params = { searchString: search };
-      if (fromDate) params.from_date = fromDate;
-      if (toDate) params.to_date = toDate;
+      if (dateApplied && fromDate) params.from_date = moment(fromDate).format('YYYY-MM-DD');
+      if (dateApplied && toDate) params.to_date = moment(toDate).format('YYYY-MM-DD');
       const res = await orderApi.exportCsv(params);
       const url = window.URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }));
       const link = document.createElement('a');
@@ -162,7 +153,7 @@ const Orders = () => {
   const getImageSrc = (img) => {
     if (!img) return null;
     if (img.startsWith('http')) return img;
-    return '/' + img;
+    if (img.startsWith('public/')) return '/' + img; return '/public/' + img;
   };
 
   const openImageViewer = (img) => {
@@ -170,186 +161,247 @@ const Orders = () => {
     setShowImageModal(true);
   };
 
-  const totalPages = pagination?.totalPages || 0;
+  const handleDateSubmit = () => {
+    setDateApplied(true);
+    setPage(1);
+  };
+
+  const clearFilters = () => {
+    setSearch('');
+    setFromDate(moment().toDate());
+    setToDate(moment().toDate());
+    setDateApplied(false);
+    setPage(1);
+  };
+
   const hasRecords = pagination && pagination.totalRecords > 0;
 
+  const renderPagination = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+    const pages = [];
+    for (let i = 1; i <= Math.min(pagination.totalPages, 15); i++) pages.push(i);
+    return (
+      <div className="cust-pagination">
+        <span className="cust-page-info">
+          Showing {pagination.start} to {pagination.end} of {pagination.totalRecords} entries
+        </span>
+        <div className="cust-page-btns">
+          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="cust-page-btn">
+            <ChevronLeft size={14} />
+          </button>
+          {pages.map(p => (
+            <button key={p} onClick={() => setPage(p)} className={`cust-page-btn ${p === page ? 'active' : ''}`}>
+              {p}
+            </button>
+          ))}
+          {pagination.totalPages > 15 && <span className="cust-page-dots">...</span>}
+          <button onClick={() => setPage(Math.min(pagination.totalPages, page + 1))} disabled={page >= pagination.totalPages} className="cust-page-btn">
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div style={styles.container}>
-      {/* Header */}
-      <div style={styles.headerRow}>
-        <h2 style={styles.title}>Orders</h2>
-        <div style={{ display: 'flex', gap: 10 }}>
+    <div>
+      {/* Top Bar */}
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <ShoppingBag size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Orders</h2>
+            {pagination && <div className="cust-count">{pagination.totalRecords} total</div>}
+          </div>
+        </div>
+        <div className="cust-topbar-right">
           {hasRecords && (
             <>
-              <button onClick={handlePdf} style={styles.pdfBtn}>PDF</button>
-              <button onClick={handleCsv} style={styles.csvBtn}>CSV</button>
+              <button onClick={handlePdf} className="cust-btn cust-btn-danger">
+                <FileText size={15} /> PDF
+              </button>
+              <button onClick={handleCsv} className="cust-btn cust-btn-success">
+                <FileSpreadsheet size={15} /> CSV
+              </button>
             </>
           )}
         </div>
       </div>
 
-      {/* Search */}
-      <div style={styles.searchRow}>
-        <input
-          type="text"
-          placeholder="Search..."
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          onKeyDown={handleSearchKeyDown}
-          style={styles.searchInput}
-        />
-        <button onClick={handleSearch} style={styles.searchBtn}>Search</button>
-      </div>
-
-      {/* Date filter */}
-      <div style={styles.filterRow}>
-        <div style={styles.filterGroup}>
-          <label style={styles.filterLabel}>From</label>
-          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} style={styles.dateInput} />
-        </div>
-        <div style={styles.filterGroup}>
-          <label style={styles.filterLabel}>To</label>
-          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} style={styles.dateInput} />
-        </div>
-        <button onClick={handleFilter} style={styles.filterBtn}>Filter</button>
-        <button onClick={handleClear} style={styles.clearBtn}>Clear</button>
-      </div>
-
-      {/* Table */}
-      <div style={styles.tableWrapper}>
-        <div style={styles.tableScroll}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>#</th>
-                <th style={styles.th}>User</th>
-                <th style={styles.th}>Product</th>
-                <th style={styles.th}>Amount</th>
-                <th style={styles.th}>Order Date</th>
-                <th style={styles.th}>Order Status</th>
-                <th style={styles.th}>Order Address</th>
-                <th style={styles.th}>Change Status</th>
-                <th style={styles.th}>Invoice Download</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={9} style={styles.noData}>Loading...</td></tr>
-              ) : data.length === 0 ? (
-                <tr><td colSpan={9} style={styles.noData}>No Data Available</td></tr>
-              ) : (
-                data.map((order, i) => {
-                  const imgSrc = getImageSrc(order.productImage || order.product?.productImage);
-                  const status = order.orderStatus || order.status || '';
-                  const isFinalized = status.toLowerCase() === 'cancelled' || status.toLowerCase() === 'delivered';
-                  const address = order.orderAddress || order.address || {};
-                  const addressStr = [address.flatNo, address.landmark, address.city, address.state, address.country ? `${address.country}-${address.pincode || ''}` : ''].filter(Boolean).join(', ');
-
-                  return (
-                    <tr key={order.id || i} style={styles.tr}>
-                      <td style={styles.td}>{(pagination?.start || 0) + i}</td>
-                      <td style={styles.td}>{order.userName || order.user?.name || '-'}</td>
-                      <td style={styles.td}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {imgSrc && (
-                            <img
-                              src={imgSrc}
-                              alt=""
-                              style={styles.productThumb}
-                              onClick={() => openImageViewer(imgSrc)}
-                              onError={(e) => { e.target.style.display = 'none'; }}
-                            />
-                          )}
-                          <span>{order.productName || order.product?.name || '-'}</span>
-                        </div>
-                      </td>
-                      <td style={styles.td}>
-                        {currencySymbol || ''}{order.amount || order.totalAmount || '-'}
-                      </td>
-                      <td style={styles.td}>{formatDate(order.orderDate || order.created_at || order.createdAt)}</td>
-                      <td style={styles.td}>
-                        <span style={{
-                          padding: '4px 12px',
-                          borderRadius: 20,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          color: '#fff',
-                          background: getStatusColor(status)
-                        }}>
-                          {status || '-'}
-                        </span>
-                      </td>
-                      <td style={{ ...styles.td, maxWidth: 200, fontSize: 13 }}>{addressStr || '-'}</td>
-                      <td style={styles.td}>
-                        {!isFinalized ? (
-                          <select
-                            value=""
-                            onChange={(e) => {
-                              if (e.target.value) openStatusChange(order, e.target.value);
-                            }}
-                            style={styles.statusSelect}
-                          >
-                            <option value="">Change</option>
-                            {statusOptions.map(s => (
-                              <option key={s} value={s}>{s}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span style={{ color: '#9ca3af', fontSize: 13 }}>-</span>
-                        )}
-                      </td>
-                      <td style={styles.td}>
-                        <button onClick={() => handleInvoiceDownload(order.id)} style={styles.downloadBtn}>
-                          Download
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Pagination */}
-      {pagination && pagination.totalRecords > 0 && (
-        <div style={styles.pagination}>
-          <span style={styles.pageInfo}>
-            Showing {pagination.start} to {pagination.end} of {pagination.totalRecords} entries
-          </span>
-          <div style={styles.pageButtons}>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i + 1}
-                onClick={() => setPage(i + 1)}
-                style={{
-                  ...styles.pageBtn,
-                  background: pagination.page === i + 1 ? '#7c3aed' : '#fff',
-                  color: pagination.page === i + 1 ? '#fff' : '#374151',
-                  border: pagination.page === i + 1 ? '1px solid #7c3aed' : '1px solid #d1d5db'
-                }}
-              >
-                {i + 1}
+      {/* Filter Bar */}
+      <div className="cust-filterbar">
+        <div className="cust-filter-group cust-filter-search-group">
+          <label className="cust-filter-label">Search</label>
+          <div className="cust-filter-search">
+            <Search size={14} className="cust-search-icon" />
+            <input
+              type="text"
+              placeholder="Search orders..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { setPage(1); fetchData(); } }}
+              className="cust-input cust-search-input"
+            />
+            {search && (
+              <button onClick={() => { setSearch(''); setPage(1); }} className="cust-search-clear">
+                <X size={13} />
               </button>
-            ))}
+            )}
           </div>
         </div>
-      )}
+        <div className="cust-filter-date-row">
+          <div className="cust-filter-group">
+            <label className="cust-filter-label">From</label>
+            <div className="cust-datepicker-wrap">
+              <Calendar size={14} className="cust-datepicker-icon" />
+              <DatePicker
+                selected={fromDate}
+                onChange={date => { setFromDate(date); setDateApplied(false); }}
+                dateFormat="dd MMM yyyy"
+                className="cust-input cust-datepicker-input"
+                placeholderText="Select date"
+              />
+            </div>
+          </div>
+          <div className="cust-filter-group">
+            <label className="cust-filter-label">To</label>
+            <div className="cust-datepicker-wrap">
+              <Calendar size={14} className="cust-datepicker-icon" />
+              <DatePicker
+                selected={toDate}
+                onChange={date => { setToDate(date); setDateApplied(false); }}
+                dateFormat="dd MMM yyyy"
+                className="cust-input cust-datepicker-input"
+                placeholderText="Select date"
+              />
+            </div>
+          </div>
+          <div className="cust-filter-actions">
+            <button onClick={handleDateSubmit} className="cust-btn cust-btn-primary">
+              <Search size={13} /> Apply
+            </button>
+            {(search || dateApplied) && (
+              <button onClick={clearFilters} className="cust-btn cust-btn-danger">
+                <X size={13} /> Clear
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="cust-card">
+        {/* Table */}
+        {loading ? <Loader text="Loading orders..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>User</th>
+                  <th>Product</th>
+                  <th>Amount</th>
+                  <th>Order Date</th>
+                  <th>Order Status</th>
+                  <th>Order Address</th>
+                  <th>Change Status</th>
+                  <th>Invoice Download</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length === 0 ? (
+                  <tr><td colSpan={9} className="cust-no-data">No Data Available</td></tr>
+                ) : (
+                  data.map((order, i) => {
+                    const imgSrc = getImageSrc(order.productImage || order.product?.productImage);
+                    const status = order.orderStatus || order.status || '';
+                    const isFinalized = status.toLowerCase() === 'cancelled' || status.toLowerCase() === 'delivered';
+                    const address = order.orderAddress || order.address || {};
+                    const addressStr = [address.flatNo, address.landmark, address.city, address.state, address.country ? `${address.country}-${address.pincode || ''}` : ''].filter(Boolean).join(', ');
+
+                    return (
+                      <tr key={order.id || i}>
+                        <td>{(pagination?.start || 0) + i}</td>
+                        <td className="cust-name-cell">{order.userName || order.user?.name || '-'}</td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {imgSrc && (
+                              <img
+                                src={imgSrc}
+                                alt=""
+                                className="cust-avatar"
+                                style={{ borderRadius: 6, cursor: 'pointer' }}
+                                onClick={() => openImageViewer(imgSrc)}
+                                onError={(e) => { e.target.style.display = 'none'; }}
+                              />
+                            )}
+                            <span>{order.productName || order.product?.name || '-'}</span>
+                          </div>
+                        </td>
+                        <td>{currencySymbol || ''}{order.amount || order.totalAmount || '-'}</td>
+                        <td className="cust-date-cell">{formatDate(order.orderDate || order.created_at || order.createdAt)}</td>
+                        <td>
+                          <span style={{
+                            padding: '4px 12px',
+                            borderRadius: 20,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: '#fff',
+                            background: getStatusColor(status),
+                            display: 'inline-block'
+                          }}>
+                            {status || '-'}
+                          </span>
+                        </td>
+                        <td style={{ maxWidth: 200, fontSize: 13 }}>{addressStr || '-'}</td>
+                        <td>
+                          {!isFinalized ? (
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                if (e.target.value) openStatusChange(order, e.target.value);
+                              }}
+                              className="cust-input"
+                              style={{ width: 'auto', minWidth: 100 }}
+                            >
+                              <option value="">Change</option>
+                              {statusOptions.map(s => (
+                                <option key={s} value={s}>{s}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span style={{ color: '#9ca3af', fontSize: 13 }}>-</span>
+                          )}
+                        </td>
+                        <td>
+                          <button onClick={() => handleInvoiceDownload(order.id)} className="cust-btn cust-btn-info" style={{ padding: '6px 14px' }}>
+                            <Download size={14} /> Invoice
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {renderPagination()}
+      </div>
 
       {/* Status Change Confirmation Modal */}
       {showStatusModal && statusOrder && (
-        <div style={styles.modalOverlay} onClick={() => setShowStatusModal(false)}>
-          <div style={styles.statusModalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.statusModalBody}>
-              <div style={styles.statusIcon}>!</div>
-              <h3 style={{ margin: '10px 0 5px', fontSize: 20 }}>Are You Sure?</h3>
-              <p style={{ color: '#6b7280', margin: '5px 0 20px' }}>
-                You want to change status to {statusValue}!
-              </p>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 10 }}>
-                <button onClick={handleStatusConfirm} style={styles.yesBtn}>Yes, Change it!</button>
-                <button onClick={() => setShowStatusModal(false)} style={styles.cancelStatusBtn}>Cancel</button>
+        <div className="cust-overlay" onClick={() => setShowStatusModal(false)}>
+          <div className="cust-modal cust-modal-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="cust-delete-content">
+              <div className="cust-delete-icon">
+                <AlertTriangle size={32} />
+              </div>
+              <h3>Are You Sure?</h3>
+              <p>You want to change status to {statusValue}!</p>
+              <div className="cust-delete-actions">
+                <button onClick={() => setShowStatusModal(false)} className="cust-btn cust-btn-ghost">Cancel</button>
+                <button onClick={handleStatusConfirm} className="cust-btn cust-btn-primary">Yes, Change it!</button>
               </div>
             </div>
           </div>
@@ -358,63 +410,17 @@ const Orders = () => {
 
       {/* Image Viewer Modal */}
       {showImageModal && viewImage && (
-        <div style={styles.modalOverlay} onClick={() => setShowImageModal(false)}>
-          <div style={styles.imageModalContent} onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setShowImageModal(false)} style={styles.imageModalClose}>&times;</button>
-            <img src={viewImage} alt="" style={styles.imageModalImg} />
+        <div className="cust-overlay" onClick={() => setShowImageModal(false)}>
+          <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative', maxWidth: '90%', maxHeight: '90vh' }}>
+            <button onClick={() => setShowImageModal(false)} style={{ position: 'absolute', top: -15, right: -15, background: '#fff', border: 'none', borderRadius: '50%', width: 34, height: 34, fontSize: 20, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#374151', zIndex: 10 }}>
+              <X size={18} />
+            </button>
+            <img src={viewImage} alt="" style={{ maxWidth: '100%', maxHeight: '85vh', borderRadius: 8, objectFit: 'contain' }} />
           </div>
         </div>
       )}
     </div>
   );
-};
-
-const styles = {
-  container: { padding: 0 },
-  headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 10 },
-  title: { margin: 0, fontSize: 22, fontWeight: 600, color: '#1f2937' },
-  pdfBtn: { background: '#ef4444', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  csvBtn: { background: '#10b981', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  searchRow: { display: 'flex', gap: 10, marginBottom: 15, flexWrap: 'wrap' },
-  searchInput: { flex: 1, minWidth: 200, padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' },
-  searchBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  filterRow: { display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'flex-end' },
-  filterGroup: { display: 'flex', flexDirection: 'column', gap: 4 },
-  filterLabel: { fontSize: 13, fontWeight: 600, color: '#6b7280' },
-  dateInput: { padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14 },
-  filterBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14, alignSelf: 'flex-end' },
-  clearBtn: { background: '#6b7280', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14, alignSelf: 'flex-end' },
-
-  // Table
-  tableWrapper: { background: '#fff', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' },
-  tableScroll: { overflowX: 'auto' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: 14 },
-  th: { padding: '12px 14px', textAlign: 'left', background: '#f8f9fa', borderBottom: '2px solid #e5e7eb', fontWeight: 600, color: '#374151', whiteSpace: 'nowrap', fontSize: 13 },
-  tr: { borderBottom: '1px solid #f3f4f6' },
-  td: { padding: '12px 14px', verticalAlign: 'middle', color: '#374151' },
-  noData: { textAlign: 'center', padding: 40, color: '#9ca3af' },
-  productThumb: { width: 40, height: 40, borderRadius: 6, objectFit: 'cover', cursor: 'pointer', border: '1px solid #e5e7eb' },
-  statusSelect: { padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 4, fontSize: 13, background: '#fff', cursor: 'pointer' },
-  downloadBtn: { background: '#3b82f6', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: 4, cursor: 'pointer', fontSize: 13, fontWeight: 500 },
-
-  // Pagination
-  pagination: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, flexWrap: 'wrap', gap: 10 },
-  pageInfo: { fontSize: 14, color: '#6b7280' },
-  pageButtons: { display: 'flex', gap: 6 },
-  pageBtn: { padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 14, fontWeight: 500 },
-
-  // Status Modal
-  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  statusModalContent: { background: '#fff', borderRadius: 10, width: '90%', maxWidth: 400, overflow: 'hidden' },
-  statusModalBody: { textAlign: 'center', padding: '30px 20px' },
-  statusIcon: { width: 60, height: 60, borderRadius: '50%', background: '#fef3c7', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 700 },
-  yesBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  cancelStatusBtn: { background: '#6b7280', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
-
-  // Image Modal
-  imageModalContent: { position: 'relative', maxWidth: '90%', maxHeight: '90vh' },
-  imageModalClose: { position: 'absolute', top: -15, right: -15, background: '#fff', border: 'none', borderRadius: '50%', width: 34, height: 34, fontSize: 20, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#374151', zIndex: 10 },
-  imageModalImg: { maxWidth: '100%', maxHeight: '85vh', borderRadius: 8, objectFit: 'contain' }
 };
 
 export default Orders;

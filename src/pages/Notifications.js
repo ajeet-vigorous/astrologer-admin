@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import Modal from '../components/Modal';
 import { notificationApi } from '../api/services';
+import Loader from '../components/Loader';
+import { Bell, Pencil, Send, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import Swal from 'sweetalert2';
+import '../styles/Customers.css';
 
 const Notifications = () => {
   const [data, setData] = useState([]);
@@ -13,9 +16,7 @@ const Notifications = () => {
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showStatusModal, setShowStatusModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
-  const [statusId, setStatusId] = useState(null);
   const [sendData, setSendData] = useState(null);
   const [sendRole, setSendRole] = useState('All');
   const [selectedUserIds, setSelectedUserIds] = useState([]);
@@ -67,8 +68,23 @@ const Notifications = () => {
     } catch (err) { console.error(err); }
   };
 
-  const handleStatus = async () => {
-    try { await notificationApi.status({ status_id: statusId }); setShowStatusModal(false); fetchData(); } catch (err) { console.error(err); }
+  const handleStatusToggle = async (id) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'Change status of this notification?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#7c3aed',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, Change',
+      cancelButtonText: 'Cancel',
+    });
+    if (result.isConfirmed) {
+      try {
+        await notificationApi.status({ status_id: id });
+        fetchData();
+      } catch (err) { console.error(err); }
+    }
   };
 
   const openEdit = (row) => {
@@ -93,10 +109,12 @@ const Notifications = () => {
       else if (sendRole === 'UserNotUsedFreeChat') payload.role = 'UserNotUsedFreeChat';
       else if (sendRole === 'Specific' && selectedUserIds.length > 0) payload.userIds = selectedUserIds;
       await notificationApi.send(payload);
-      alert('Notification sent successfully!');
+      Swal.fire({ title: 'Sent!', text: 'Notification sent successfully!', icon: 'success', confirmButtonColor: '#7c3aed', timer: 1500, showConfirmButton: false });
       setShowSendModal(false);
       setSendData(null);
-    } catch (err) { alert('Failed to send: ' + err.message); }
+    } catch (err) {
+      Swal.fire({ title: 'Error!', text: 'Failed to send: ' + err.message, icon: 'error', confirmButtonColor: '#7c3aed' });
+    }
   };
 
   const toggleUser = (userId) => {
@@ -114,15 +132,37 @@ const Notifications = () => {
   };
 
   const renderPagination = () => {
+    if (totalPages <= 1) return null;
     const pages = [];
-    for (let i = 1; i <= totalPages; i++) pages.push(i);
+    const maxVisible = 5;
+    let startPage = Math.max(1, page - Math.floor(maxVisible / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+    if (endPage - startPage + 1 < maxVisible) {
+      startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+    for (let i = startPage; i <= endPage; i++) pages.push(i);
+
     return (
-      <div style={styles.paginationWrapper}>
-        <div style={styles.showingText}>Showing {totalRecords === 0 ? 0 : start} to {end} of {totalRecords} entries</div>
-        <div style={styles.paginationButtons}>
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ ...styles.pageBtn, ...(page === 1 ? styles.pageBtnDisabled : {}) }}>Prev</button>
-          {pages.map(p => (<button key={p} onClick={() => setPage(p)} style={{ ...styles.pageBtn, ...(p === page ? styles.pageBtnActive : {}) }}>{p}</button>))}
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ ...styles.pageBtn, ...(page === totalPages ? styles.pageBtnDisabled : {}) }}>Next</button>
+      <div className="cust-pagination">
+        <span className="cust-page-info">Showing {totalRecords === 0 ? 0 : start} to {end} of {totalRecords}</span>
+        <div className="cust-page-btns">
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="cust-page-btn"><ChevronLeft size={14} /></button>
+          {startPage > 1 && (
+            <>
+              <button onClick={() => setPage(1)} className={`cust-page-btn ${page === 1 ? 'active' : ''}`}>1</button>
+              {startPage > 2 && <span className="cust-page-dots">...</span>}
+            </>
+          )}
+          {pages.map(p => (
+            <button key={p} onClick={() => setPage(p)} className={`cust-page-btn ${p === page ? 'active' : ''}`}>{p}</button>
+          ))}
+          {endPage < totalPages && (
+            <>
+              {endPage < totalPages - 1 && <span className="cust-page-dots">...</span>}
+              <button onClick={() => setPage(totalPages)} className={`cust-page-btn ${page === totalPages ? 'active' : ''}`}>{totalPages}</button>
+            </>
+          )}
+          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="cust-page-btn"><ChevronRight size={14} /></button>
         </div>
       </div>
     );
@@ -130,158 +170,169 @@ const Notifications = () => {
 
   const renderForm = (f, setF, onSubmit, btnText) => (
     <form onSubmit={onSubmit}>
-      <div style={{ marginBottom: 12 }}>
-        <label style={styles.label}>Title <span style={{ color: 'red' }}>*</span></label>
-        <input type="text" value={f.title} onChange={e => setF({ ...f, title: e.target.value })} required style={styles.input} placeholder="Notification Title" />
+      <div className="cust-form-group">
+        <label>Title <span style={{ color: 'red' }}>*</span></label>
+        <input type="text" value={f.title} onChange={e => setF({ ...f, title: e.target.value })} required placeholder="Notification Title" />
       </div>
-      <div style={{ marginBottom: 12 }}>
-        <label style={styles.label}>Description <span style={{ color: 'red' }}>*</span></label>
-        <textarea value={f.description} onChange={e => setF({ ...f, description: e.target.value })} required style={{ ...styles.input, minHeight: 100 }} placeholder="Notification description..." />
+      <div className="cust-form-group">
+        <label>Description <span style={{ color: 'red' }}>*</span></label>
+        <textarea value={f.description} onChange={e => setF({ ...f, description: e.target.value })} required placeholder="Notification description..." rows={4} />
       </div>
-      <button type="submit" style={styles.addBtn}>{btnText}</button>
+      <button type="submit" className="cust-btn cust-btn-primary cust-btn-full">{btnText}</button>
     </form>
   );
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.header}>
-          <h2 style={styles.title}>Notifications</h2>
-          <button onClick={() => { setForm({ ...emptyForm }); setShowAddModal(true); }} style={styles.addBtn}>Add Notification</button>
+    <div>
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <Bell size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">Notifications</h2>
+            <div className="cust-count">{totalRecords} total</div>
+          </div>
         </div>
+        <div className="cust-topbar-right">
+          <button onClick={() => { setForm({ ...emptyForm }); setShowAddModal(true); }} className="cust-btn cust-btn-primary">
+            <Plus size={15} /> Add Notification
+          </button>
+        </div>
+      </div>
 
-        <div style={styles.tableWrapper}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                {['#', 'Title', 'Description', 'Status', 'Actions'].map((h, i) => (
-                  <th key={i} style={styles.th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={5} style={styles.noData}>Loading...</td></tr>
-              ) : data.length === 0 ? (
-                <tr><td colSpan={5} style={styles.noData}>No Data Available</td></tr>
-              ) : (
-                data.map((row, index) => (
-                  <tr key={row.id || index} style={index % 2 === 0 ? styles.rowEven : styles.rowOdd}>
-                    <td style={styles.td}>{(page - 1) * 15 + index + 1}</td>
-                    <td style={styles.td}><span style={{ fontWeight: 500 }}>{row.title || '--'}</span></td>
-                    <td style={{ ...styles.td, maxWidth: 300, whiteSpace: 'normal' }} title={row.description}>{truncate(row.description)}</td>
-                    <td style={styles.td}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }}>
-                        <input type="checkbox" checked={!!row.isActive} onChange={() => { setStatusId(row.id); setShowStatusModal(true); }} />
-                        <span style={{ color: row.isActive ? '#059669' : '#dc2626', fontWeight: 500, fontSize: 12 }}>{row.isActive ? 'Active' : 'Inactive'}</span>
-                      </label>
-                    </td>
-                    <td style={styles.td}>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => openEdit(row)} style={styles.linkBtn}>Edit</button>
-                        <button onClick={() => openSend(row)} style={{ ...styles.linkBtn, color: '#059669' }}>Send</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      <div className="cust-card">
+        {loading ? (
+          <Loader text="Loading notifications..." />
+        ) : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Title</th>
+                  <th>Description</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length === 0 ? (
+                  <tr><td colSpan={5} className="cust-no-data">No Data Available</td></tr>
+                ) : (
+                  data.map((row, index) => (
+                    <tr key={row.id || index}>
+                      <td>{(page - 1) * 15 + index + 1}</td>
+                      <td className="cust-name-cell">{row.title || '--'}</td>
+                      <td title={row.description}>{truncate(row.description)}</td>
+                      <td>
+                        <span
+                          onClick={() => handleStatusToggle(row.id)}
+                          className={`cust-verify-badge ${row.isActive ? 'verified' : 'unverified'}`}
+                        >
+                          {row.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="cust-actions">
+                          <button onClick={() => openEdit(row)} className="cust-action-btn cust-action-edit" title="Edit"><Pencil size={15} /></button>
+                          <button onClick={() => openSend(row)} className="cust-action-btn cust-action-view" title="Send"><Send size={15} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
         {renderPagination()}
       </div>
 
-      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Notification">
-        {renderForm(form, setForm, handleAdd, 'Add Notification')}
-      </Modal>
-
-      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Edit Notification">
-        {renderForm(editForm, setEditForm, handleEdit, 'Save')}
-      </Modal>
-
-      <Modal isOpen={showSendModal} onClose={() => setShowSendModal(false)} title="Send Notification">
-        <div>
-          <p style={{ marginBottom: 15, color: '#374151' }}>
-            Sending: <strong>{sendData?.title}</strong>
-          </p>
-          <div style={{ marginBottom: 12 }}>
-            <label style={styles.label}>Send To <span style={{ color: 'red' }}>*</span></label>
-            <select value={sendRole} onChange={e => setSendRole(e.target.value)} style={styles.input}>
-              <option value="All">All</option>
-              <option value="User">User</option>
-              <option value="Astrologer">Astrologer</option>
-              <option value="UserNeverRecharged">User Never Recharged</option>
-              <option value="UserNotUsedFreeChat">User Not Used Free Chat/Call</option>
-              <option value="Specific">Specific Users</option>
-            </select>
-          </div>
-
-          {sendRole === 'Specific' && (
-            <div style={{ marginBottom: 12 }}>
-              <label style={styles.label}>Select Users</label>
-              <input type="text" value={userSearch} onChange={e => setUserSearch(e.target.value)} style={{ ...styles.input, marginBottom: 8 }} placeholder="Search users..." />
-              <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid #d1d5db', borderRadius: 6, padding: 8 }}>
-                {filteredUsers.length === 0 ? (
-                  <p style={{ color: '#9ca3af', fontSize: 13, textAlign: 'center' }}>No users found</p>
-                ) : (
-                  filteredUsers.map(u => (
-                    <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer', fontSize: 13 }}>
-                      <input type="checkbox" checked={selectedUserIds.includes(u.id)} onChange={() => toggleUser(u.id)} />
-                      <span>{u.name || 'Unknown'} {u.contactNo ? `(${u.contactNo})` : ''}</span>
-                    </label>
-                  ))
-                )}
-              </div>
-              {selectedUserIds.length > 0 && (
-                <p style={{ fontSize: 12, color: '#7c3aed', marginTop: 4 }}>{selectedUserIds.length} user(s) selected</p>
-              )}
+      {/* Add Notification Modal */}
+      {showAddModal && (
+        <div className="cust-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="cust-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Add Notification</h3>
+              <button onClick={() => setShowAddModal(false)} className="cust-modal-close"><X size={20} /></button>
             </div>
-          )}
-
-          <button onClick={handleSend} style={{ ...styles.addBtn, width: '100%', background: '#059669' }}>Send Notification</button>
+            <div className="cust-modal-body">
+              {renderForm(form, setForm, handleAdd, 'Add Notification')}
+            </div>
+          </div>
         </div>
-      </Modal>
+      )}
 
-      {showStatusModal && (
-        <div style={styles.overlay} onClick={() => setShowStatusModal(false)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, textAlign: 'center' }}>Are You Sure?</h3>
-            <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 8 }}>You want to change the status?</p>
-            <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center', gap: 10 }}>
-              <button onClick={handleStatus} style={styles.addBtn}>Yes</button>
-              <button onClick={() => setShowStatusModal(false)} style={{ ...styles.addBtn, background: '#6b7280' }}>Cancel</button>
+      {/* Edit Notification Modal */}
+      {showEditModal && (
+        <div className="cust-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="cust-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Edit Notification</h3>
+              <button onClick={() => setShowEditModal(false)} className="cust-modal-close"><X size={20} /></button>
+            </div>
+            <div className="cust-modal-body">
+              {renderForm(editForm, setEditForm, handleEdit, 'Save')}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send Notification Modal */}
+      {showSendModal && (
+        <div className="cust-overlay" onClick={() => setShowSendModal(false)}>
+          <div className="cust-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Send Notification</h3>
+              <button onClick={() => setShowSendModal(false)} className="cust-modal-close"><X size={20} /></button>
+            </div>
+            <div className="cust-modal-body">
+              <div className="cust-form-group">
+                <label>Sending</label>
+                <div className="cust-name-cell">{sendData?.title}</div>
+              </div>
+              <div className="cust-form-group">
+                <label>Send To <span style={{ color: 'red' }}>*</span></label>
+                <select value={sendRole} onChange={e => setSendRole(e.target.value)}>
+                  <option value="All">All</option>
+                  <option value="User">User</option>
+                  <option value="Astrologer">Astrologer</option>
+                  <option value="UserNeverRecharged">User Never Recharged</option>
+                  <option value="UserNotUsedFreeChat">User Not Used Free Chat/Call</option>
+                  <option value="Specific">Specific Users</option>
+                </select>
+              </div>
+
+              {sendRole === 'Specific' && (
+                <div className="cust-form-group">
+                  <label>Select Users</label>
+                  <input type="text" value={userSearch} onChange={e => setUserSearch(e.target.value)} placeholder="Search users..." style={{ marginBottom: 8 }} />
+                  <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 8, padding: 8, background: '#f8fafc' }}>
+                    {filteredUsers.length === 0 ? (
+                      <p style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', margin: '12px 0' }}>No users found</p>
+                    ) : (
+                      filteredUsers.map(u => (
+                        <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 4px', cursor: 'pointer', fontSize: 13, borderRadius: 4 }}>
+                          <input type="checkbox" checked={selectedUserIds.includes(u.id)} onChange={() => toggleUser(u.id)} />
+                          <span>{u.name || 'Unknown'} {u.contactNo ? `(${u.contactNo})` : ''}</span>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                  {selectedUserIds.length > 0 && (
+                    <span className="cust-err" style={{ color: '#7c3aed' }}>{selectedUserIds.length} user(s) selected</span>
+                  )}
+                </div>
+              )}
+
+              <button onClick={handleSend} className="cust-btn cust-btn-success cust-btn-full">
+                <Send size={15} /> Send Notification
+              </button>
             </div>
           </div>
         </div>
       )}
     </div>
   );
-};
-
-const styles = {
-  container: { padding: 0 },
-  card: { background: '#fff', borderRadius: 10, boxShadow: '0 2px 12px rgba(0,0,0,0.07)', padding: 24 },
-  header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 },
-  title: { margin: 0, fontSize: 22, fontWeight: 700, color: '#1e293b' },
-  addBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  linkBtn: { background: 'none', border: 'none', color: '#7c3aed', cursor: 'pointer', fontWeight: 500, fontSize: 13 },
-  label: { fontSize: 13, fontWeight: 500, display: 'block', marginBottom: 4 },
-  input: { width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' },
-  tableWrapper: { overflowX: 'auto', width: '100%' },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  th: { background: '#7c3aed', color: '#fff', padding: '12px 14px', textAlign: 'left', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', borderBottom: '2px solid #6d28d9' },
-  td: { padding: '10px 14px', fontSize: 13, color: '#374151', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap', verticalAlign: 'middle' },
-  rowEven: { background: '#f8f9fa' },
-  rowOdd: { background: '#fff' },
-  noData: { padding: '40px 14px', textAlign: 'center', color: '#9ca3af', fontSize: 15 },
-  paginationWrapper: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 18, flexWrap: 'wrap', gap: 12 },
-  showingText: { fontSize: 13, color: '#6b7280' },
-  paginationButtons: { display: 'flex', gap: 4, flexWrap: 'wrap' },
-  pageBtn: { padding: '6px 14px', border: '1px solid #d1d5db', borderRadius: 4, background: '#fff', color: '#374151', cursor: 'pointer', fontSize: 13 },
-  pageBtnActive: { background: '#7c3aed', color: '#fff', borderColor: '#7c3aed' },
-  pageBtnDisabled: { opacity: 0.5, cursor: 'not-allowed' },
-  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 },
-  modal: { background: '#fff', borderRadius: 12, padding: 30, maxWidth: 400, width: '90%' }
 };
 
 export default Notifications;

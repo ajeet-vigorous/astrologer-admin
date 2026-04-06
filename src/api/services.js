@@ -62,7 +62,8 @@ export const bannerApi = {
   getAll: (params) => API.get('/banners', { params }),
   add: (data) => API.post('/banners/add', data),
   edit: (data) => API.post('/banners/edit', data),
-  status: (data) => API.post('/banners/status', data)
+  status: (data) => API.post('/banners/status', data),
+  delete: (data) => API.post('/banners/delete', data)
 };
 
 // ==================== COUPONS ====================
@@ -130,7 +131,9 @@ export const astroMallApi = {
   addProduct: (data) => API.post('/astromall/products/add', data),
   editProduct: (data) => API.post('/astromall/products/edit', data),
   productStatus: (data) => API.post('/astromall/products/status', data),
-  addProductDetail: (data) => API.post('/astromall/products/detail', data)
+  addProductDetail: (data) => API.post('/astromall/products/detail', data),
+  deleteCategory: (data) => API.post('/astromall/categories/delete', data),
+  deleteProduct: (data) => API.post('/astromall/products/delete', data)
 };
 
 // ==================== HELP SUPPORT ====================

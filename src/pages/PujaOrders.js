@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { HandHeart, Loader2, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import Swal from 'sweetalert2';
 import { pujaApi } from '../api/services';
+import '../styles/Customers.css';
+
+import getImgSrc from '../utils/getImageUrl';
 
 const PujaOrders = () => {
   const [data, setData] = useState([]);
@@ -10,7 +15,7 @@ const PujaOrders = () => {
   const [end, setEnd] = useState(0);
   const [loading, setLoading] = useState(false);
   const [astrologers, setAstrologers] = useState([]);
-  const [currency, setCurrency] = useState('₹');
+  const [currency, setCurrency] = useState('\u20B9');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [viewerImg, setViewerImg] = useState(null);
@@ -25,7 +30,7 @@ const PujaOrders = () => {
       const d = res.data || {};
       setData(d.pujaOrderlist || []);
       setAstrologers(d.astrologers || []);
-      setCurrency(d.currency?.value || '₹');
+      setCurrency(d.currency?.value || '\u20B9');
       setTotalPages(d.totalPages || 1);
       setTotalRecords(d.totalRecords || 0);
       setStart(d.start || 0);
@@ -42,9 +47,9 @@ const PujaOrders = () => {
   const handleAssign = async (orderId, astrologerId) => {
     try {
       await pujaApi.updateOrder({ puja_order_id: orderId, astrologer_id: astrologerId });
-      alert('Astrologer assigned successfully!');
+      Swal.fire('Success', 'Astrologer assigned successfully!', 'success');
       fetchData();
-    } catch (err) { alert('Failed to assign'); console.error(err); }
+    } catch (err) { Swal.fire('Error', 'Failed to assign', 'error'); console.error(err); }
   };
 
   const formatDate = (d) => {
@@ -61,11 +66,6 @@ const PujaOrders = () => {
     return `${dd}-${mm}-${yyyy} ${String(hh).padStart(2, '0')}:${min} ${ampm}`;
   };
 
-  const getImgSrc = (img) => {
-    if (!img) return null;
-    if (img.startsWith('http')) return img;
-    return '/' + img;
-  };
 
   const getPujaImages = (row) => {
     if (!row.puja_images || !Array.isArray(row.puja_images)) return [];
@@ -79,117 +79,129 @@ const PujaOrders = () => {
   const handleFilter = () => { setPage(1); fetchData(); };
   const handleClear = () => { setFromDate(''); setToDate(''); setPage(1); };
 
-  const renderPagination = () => {
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case 'completed': return 'cust-verify-badge verified';
+      case 'cancelled': return 'cust-verify-badge unverified';
+      default: return 'cust-verify-badge';
+    }
+  };
+
+  // Smart pagination
+  const getPageNumbers = () => {
     const pages = [];
-    for (let i = 1; i <= totalPages; i++) pages.push(i);
-    return (
-      <div style={styles.paginationWrapper}>
-        <div style={styles.showingText}>
-          Showing {totalRecords === 0 ? 0 : start} to {end} of {totalRecords} entries
-        </div>
-        <div style={styles.paginationButtons}>
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            style={{ ...styles.pageBtn, ...(page === 1 ? styles.pageBtnDisabled : {}) }}>Prev</button>
-          {pages.map(p => (
-            <button key={p} onClick={() => setPage(p)}
-              style={{ ...styles.pageBtn, ...(p === page ? styles.pageBtnActive : {}) }}>{p}</button>
-          ))}
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-            style={{ ...styles.pageBtn, ...(page === totalPages ? styles.pageBtnDisabled : {}) }}>Next</button>
-        </div>
-      </div>
-    );
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (page > 3) pages.push('...');
+      const startP = Math.max(2, page - 1);
+      const endP = Math.min(totalPages - 1, page + 1);
+      for (let i = startP; i <= endP; i++) pages.push(i);
+      if (page < totalPages - 2) pages.push('...');
+      pages.push(totalPages);
+    }
+    return pages;
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.header}>
-          <h2 style={styles.title}>Puja Order List</h2>
+    <div>
+      {/* Top Bar */}
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <HandHeart size={20} color="#7c3aed" />
+          <h2 className="cust-title">Puja Order List</h2>
+          <span className="cust-count">({totalRecords} total)</span>
         </div>
+      </div>
 
-        {/* Date Filters */}
-        <div style={styles.filterRow}>
-          <label style={styles.filterLabel}>From:</label>
-          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} style={styles.dateInput} />
-          <label style={styles.filterLabel}>To:</label>
-          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} style={styles.dateInput} />
-          <button onClick={handleFilter} style={styles.filterBtn}>Filter</button>
-          <button onClick={handleClear} style={styles.clearBtn}>Clear</button>
+      {/* Filter Bar */}
+      <div className="cust-filterbar">
+        <div className="cust-filter-date-row">
+          <div className="cust-filter-group">
+            <label className="cust-filter-label">From</label>
+            <input type="date" className="cust-input cust-date-input" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+          </div>
+          <div className="cust-filter-group">
+            <label className="cust-filter-label">To</label>
+            <input type="date" className="cust-input cust-date-input" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+          </div>
+          <div className="cust-filter-actions">
+            <button className="cust-btn cust-btn-primary" onClick={handleFilter}>Filter</button>
+            <button className="cust-btn cust-btn-ghost" onClick={handleClear}>Clear</button>
+          </div>
         </div>
+      </div>
 
-        <div style={styles.tableWrapper}>
-          <table style={styles.table}>
+      {/* Table Card */}
+      <div className="cust-card">
+        <div className="cust-table-wrap">
+          <table className="cust-table">
             <thead>
               <tr>
-                {['#', 'Astrologer', 'User', 'Contact', 'Address', 'Puja', 'Puja Images', 'Package', 'Price', 'Date', 'Status'].map((h, i) => (
-                  <th key={i} style={styles.th}>{h}</th>
-                ))}
+                <th>#</th>
+                <th>Astrologer</th>
+                <th>User</th>
+                <th>Contact</th>
+                <th>Address</th>
+                <th>Puja</th>
+                <th>Puja Images</th>
+                <th>Package</th>
+                <th>Price</th>
+                <th>Date</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={11} style={styles.noData}>Loading...</td></tr>
+                <tr><td colSpan={11} className="cust-no-data"><Loader2 size={22} className="spin" color="#7c3aed" /> Loading...</td></tr>
               ) : data.length === 0 ? (
-                <tr><td colSpan={11} style={styles.noData}>No Data Available</td></tr>
+                <tr><td colSpan={11} className="cust-no-data">No Data Available</td></tr>
               ) : (
                 data.map((row, index) => (
-                  <tr key={row.id || index} style={index % 2 === 0 ? styles.rowEven : styles.rowOdd}>
-                    <td style={styles.td}>{(page - 1) * 15 + index + 1}</td>
+                  <tr key={row.id || index}>
+                    <td>{(page - 1) * 15 + index + 1}</td>
                     {/* Astrologer dropdown */}
-                    <td style={styles.td}>
-                      <select value={row.astrologer_id || ''} onChange={(e) => handleAssign(row.id, e.target.value)}
-                        style={styles.selectDropdown}>
+                    <td>
+                      <select className="cust-input" value={row.astrologer_id || ''} onChange={(e) => handleAssign(row.id, e.target.value)}>
                         <option value="" disabled>--Select--</option>
                         {astrologers.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                       </select>
                     </td>
-                    {/* User with profile image */}
-                    <td style={styles.td}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={styles.profileCircle}>
-                          {row.userProfile ? (
-                            <img src={getImgSrc(row.userProfile)} alt="" style={styles.profileImg}
-                              onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
-                          ) : null}
-                          <div style={{ ...styles.profileFallback, display: row.userProfile ? 'none' : 'flex' }}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-                          </div>
-                        </div>
+                    {/* User */}
+                    <td>
+                      <div className="cust-name-cell">
+                        {row.userProfile ? (
+                          <img className="cust-avatar" src={getImgSrc(row.userProfile)} alt=""
+                            onError={(e) => { e.target.style.display = 'none'; }} />
+                        ) : null}
                         <span>{row.userName || '--'}</span>
                       </div>
                     </td>
-                    <td style={styles.td}>{row.contactNo || '--'}</td>
-                    <td style={{ ...styles.td, maxWidth: 200, whiteSpace: 'normal' }}>{getAddress(row)}</td>
-                    <td style={styles.td}>{row.puja_name || row.puja_name_from_puja || '--'}</td>
+                    <td>{row.contactNo || '--'}</td>
+                    <td>{getAddress(row)}</td>
+                    <td className="cust-name-cell">{row.puja_name || row.puja_name_from_puja || '--'}</td>
                     {/* Puja Images */}
-                    <td style={styles.td}>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        {getPujaImages(row).length > 0 ? (
-                          getPujaImages(row).slice(0, 3).map((img, imgIdx) => (
-                            <img key={imgIdx} src={getImgSrc(img)} alt="" style={styles.thumbImg}
-                              onClick={() => setViewerImg(getImgSrc(img))}
-                              onError={(e) => { e.target.style.display = 'none'; }} />
-                          ))
-                        ) : (
-                          <span style={{ color: '#9ca3af', fontSize: 12 }}>No Images</span>
-                        )}
-                      </div>
+                    <td>
+                      {getPujaImages(row).length > 0 ? (
+                        getPujaImages(row).slice(0, 3).map((img, imgIdx) => (
+                          <img key={imgIdx} className="cust-avatar" src={getImgSrc(img)} alt=""
+                            onClick={() => setViewerImg(getImgSrc(img))}
+                            onError={(e) => { e.target.style.display = 'none'; }} />
+                        ))
+                      ) : (
+                        <span className="cust-date-cell">No Images</span>
+                      )}
                     </td>
-                    <td style={styles.td}>{row.package_name || '--'}</td>
-                    <td style={styles.td}>{currency} {row.order_total_price ? Number(row.order_total_price).toFixed(2) : '0.00'}</td>
-                    <td style={styles.td}>{formatDate(row.created_at)}</td>
-                    <td style={styles.td}>
-                      <select value={row.puja_order_status || 'placed'} onChange={async (e) => {
+                    <td>{row.package_name || '--'}</td>
+                    <td className="cust-name-cell">{currency} {row.order_total_price ? Number(row.order_total_price).toFixed(2) : '0.00'}</td>
+                    <td className="cust-date-cell">{formatDate(row.created_at)}</td>
+                    <td>
+                      <select className={getStatusBadgeClass(row.puja_order_status)} value={row.puja_order_status || 'placed'} onChange={async (e) => {
                         try {
                           await pujaApi.updateOrder({ puja_order_id: row.id, puja_order_status: e.target.value });
                           fetchData();
-                        } catch(err) { alert('Failed to update status'); }
-                      }} style={{
-                        padding: '4px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                        background: row.puja_order_status === 'completed' ? '#d1fae5' : row.puja_order_status === 'cancelled' ? '#fee2e2' : '#fef3c7',
-                        color: row.puja_order_status === 'completed' ? '#065f46' : row.puja_order_status === 'cancelled' ? '#991b1b' : '#92400e',
-                        border: '1px solid #d1d5db'
+                        } catch(err) { Swal.fire('Error', 'Failed to update status', 'error'); }
                       }}>
                         <option value="pending">Pending</option>
                         <option value="placed">Placed</option>
@@ -204,54 +216,47 @@ const PujaOrders = () => {
           </table>
         </div>
 
-        {renderPagination()}
+        {/* Smart Pagination */}
+        <div className="cust-pagination">
+          <div className="cust-page-info">
+            Showing {totalRecords === 0 ? 0 : start} to {end} of {totalRecords} entries
+          </div>
+          <div className="cust-page-btns">
+            <button className="cust-page-btn" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+              <ChevronLeft size={16} />
+            </button>
+            {getPageNumbers().map((p, i) =>
+              p === '...' ? (
+                <span key={'dots-' + i} className="cust-page-dots">...</span>
+              ) : (
+                <button key={p} className={`cust-page-btn ${p === page ? 'active' : ''}`} onClick={() => setPage(p)}>
+                  {p}
+                </button>
+              )
+            )}
+            <button className="cust-page-btn" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Image Viewer Modal */}
       {viewerImg && (
-        <div style={styles.overlay} onClick={() => setViewerImg(null)}>
-          <div style={styles.viewerContent} onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setViewerImg(null)} style={styles.closeBtn}>✕</button>
-            <img src={viewerImg} alt="" style={styles.viewerImg} />
+        <div className="cust-overlay" onClick={() => setViewerImg(null)}>
+          <div className="cust-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cust-modal-header">
+              <h3>Image Preview</h3>
+              <button className="cust-modal-close" onClick={() => setViewerImg(null)}><X size={18} /></button>
+            </div>
+            <div className="cust-modal-body">
+              <img src={viewerImg} alt="" className="cd-item-img" />
+            </div>
           </div>
         </div>
       )}
     </div>
   );
-};
-
-const styles = {
-  container: { padding: 0 },
-  card: { background: '#fff', borderRadius: 10, boxShadow: '0 2px 12px rgba(0,0,0,0.07)', padding: 24 },
-  header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15, flexWrap: 'wrap', gap: 12 },
-  title: { margin: 0, fontSize: 22, fontWeight: 700, color: '#1e293b' },
-  filterRow: { display: 'flex', gap: 10, alignItems: 'center', marginBottom: 18, flexWrap: 'wrap' },
-  filterLabel: { fontWeight: 600, fontSize: 14, color: '#374151' },
-  dateInput: { padding: '7px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14 },
-  filterBtn: { background: '#7c3aed', color: '#fff', border: 'none', padding: '7px 18px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  clearBtn: { background: '#6b7280', color: '#fff', border: 'none', padding: '7px 18px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 14 },
-  tableWrapper: { overflowX: 'auto', width: '100%' },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  th: { background: '#7c3aed', color: '#fff', padding: '12px 14px', textAlign: 'left', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', borderBottom: '2px solid #6d28d9' },
-  td: { padding: '10px 14px', fontSize: 13, color: '#374151', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap', verticalAlign: 'middle' },
-  rowEven: { background: '#f8f9fa' },
-  rowOdd: { background: '#fff' },
-  noData: { padding: '40px 14px', textAlign: 'center', color: '#9ca3af', fontSize: 15 },
-  selectDropdown: { padding: '5px 8px', border: '1px solid #d1d5db', borderRadius: 4, fontSize: 13, width: 150 },
-  profileCircle: { width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: '#e5e7eb' },
-  profileImg: { width: '100%', height: '100%', objectFit: 'cover' },
-  profileFallback: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#e5e7eb' },
-  thumbImg: { width: 40, height: 40, borderRadius: 6, objectFit: 'cover', cursor: 'pointer', border: '1px solid #e5e7eb' },
-  paginationWrapper: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 18, flexWrap: 'wrap', gap: 12 },
-  showingText: { fontSize: 13, color: '#6b7280' },
-  paginationButtons: { display: 'flex', gap: 4, flexWrap: 'wrap' },
-  pageBtn: { padding: '6px 14px', border: '1px solid #d1d5db', borderRadius: 4, background: '#fff', color: '#374151', cursor: 'pointer', fontSize: 13 },
-  pageBtnActive: { background: '#7c3aed', color: '#fff', borderColor: '#7c3aed' },
-  pageBtnDisabled: { opacity: 0.5, cursor: 'not-allowed' },
-  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 },
-  viewerContent: { position: 'relative', maxWidth: '90vw', maxHeight: '90vh' },
-  closeBtn: { position: 'absolute', top: -15, right: -15, background: '#fff', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' },
-  viewerImg: { maxWidth: '90vw', maxHeight: '85vh', borderRadius: 8, objectFit: 'contain' }
 };
 
 export default PujaOrders;

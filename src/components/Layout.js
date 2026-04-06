@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import {
+  LayoutDashboard, Users, Sparkles, ShoppingBag, Star, FileText,
+  Newspaper, Video, TicketCheck, BookOpen, HandHeart, ScrollText,
+  Link2, GraduationCap, FileStack, Palette, MonitorPlay, CircleHelp,
+  Settings, UsersRound, Sliders, BarChart3, Wallet, LogOut,
+  Bell, Menu, X
+} from 'lucide-react';
 import './Layout.css';
 
 const menuItems = [
-  { title: 'Dashboard', path: '/admin/dashboard' },
-  { title: 'Customers', path: '/admin/customers' },
-  { title: 'Astrologer', children: [
+  { title: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+  { title: 'Customers', path: '/admin/customers', icon: Users },
+  { title: 'Astrologer', icon: Sparkles, children: [
     { title: 'Manage Astrologer', path: '/admin/astrologers' },
     { title: 'Block Astrologer', path: '/admin/blocked-astrologers' },
     { title: 'Pending Requests', path: '/admin/pending-astrologers' },
@@ -21,24 +28,24 @@ const menuItems = [
     { title: 'AI Astrologers', path: '/admin/ai-astrologer' },
     { title: 'AI Chat History', path: '/admin/ai-chat-history' },
   ]},
-  { title: 'AstroShop', children: [
+  { title: 'AstroShop', icon: ShoppingBag, children: [
     { title: 'Product Categories', path: '/admin/astromall/categories' },
     { title: 'Products', path: '/admin/astromall/products' },
     { title: 'Orders', path: '/admin/astromall/orders' },
     { title: 'Product Recommend', path: '/admin/astromall/product-recommend' },
   ]},
-  { title: 'Horoscope', children: [
+  { title: 'Horoscope', icon: Star, children: [
     { title: 'Daily Horoscope', path: '/admin/daily-horoscope' },
     { title: 'Weekly Horoscope', path: '/admin/weekly-horoscope' },
     { title: 'Yearly Horoscope', path: '/admin/yearly-horoscope' },
     { title: 'Horoscope Feedback', path: '/admin/horoscope-feedback' },
   ]},
-  { title: 'Blogs', path: '/admin/blogs' },
-  { title: 'Astroguru News', path: '/admin/news' },
-  { title: 'Videos Ads', path: '/admin/ads-videos' },
-  { title: 'Support Tickets', path: '/admin/tickets' },
-  { title: 'Stories', path: '/admin/stories' },
-  { title: 'Puja Management', children: [
+  { title: 'Blogs', path: '/admin/blogs', icon: FileText },
+  { title: 'Astroguru News', path: '/admin/news', icon: Newspaper },
+  { title: 'Videos Ads', path: '/admin/ads-videos', icon: Video },
+  { title: 'Support Tickets', path: '/admin/tickets', icon: TicketCheck },
+  { title: 'Stories', path: '/admin/stories', icon: BookOpen },
+  { title: 'Puja Management', icon: HandHeart, children: [
     { title: 'Puja Categories', path: '/admin/puja-categories' },
     { title: 'Puja SubCategories', path: '/admin/puja-subcategories' },
     { title: 'Puja List', path: '/admin/puja-list' },
@@ -48,22 +55,22 @@ const menuItems = [
     { title: 'Puja Packages', path: '/admin/puja-packages' },
     { title: 'Puja FAQ', path: '/admin/puja-faq' },
   ]},
-  { title: 'Kundali', children: [
+  { title: 'Kundali', icon: ScrollText, children: [
     { title: 'Kundali Earnings', path: '/admin/kundali-earnings' },
     { title: 'Kundali Prices', path: '/admin/kundali-prices' },
   ]},
-  { title: 'Referral Settings', path: '/admin/referral-settings' },
-  { title: 'Course Management', children: [
+  { title: 'Referral Settings', path: '/admin/referral-settings', icon: Link2 },
+  { title: 'Course Management', icon: GraduationCap, children: [
     { title: 'Course Categories', path: '/admin/course-categories' },
     { title: 'Courses', path: '/admin/course-list' },
     { title: 'Course Chapters', path: '/admin/course-chapters' },
     { title: 'Course Orders', path: '/admin/course-orders' },
   ]},
-  { title: 'Page Management', path: '/admin/pages' },
-  { title: 'App Design', path: '/admin/app-design' },
-  { title: 'Training Videos', path: '/admin/training-videos' },
-  { title: 'Web Home FAQ', path: '/admin/web-home-faq' },
-  { title: 'Master Settings', children: [
+  { title: 'Page Management', path: '/admin/pages', icon: FileStack },
+  { title: 'App Design', path: '/admin/app-design', icon: Palette },
+  { title: 'Training Videos', path: '/admin/training-videos', icon: MonitorPlay },
+  { title: 'Web Home FAQ', path: '/admin/web-home-faq', icon: CircleHelp },
+  { title: 'Master Settings', icon: Settings, children: [
     { title: 'Customer Profile', path: '/admin/default-images' },
     { title: 'HoroScope Signs', path: '/admin/horoscope-signs' },
     { title: 'Report Type', path: '/admin/reports' },
@@ -72,18 +79,18 @@ const menuItems = [
     { title: 'Help Support', path: '/admin/help-support' },
     { title: 'Recharge Amount', path: '/admin/recharge' },
   ]},
-  { title: 'Team Management', children: [
+  { title: 'Team Management', icon: UsersRound, children: [
     { title: 'Team Roles', path: '/admin/team-roles' },
     { title: 'Team List', path: '/admin/team-list' },
   ]},
-  { title: 'General Settings', path: '/admin/setting' },
-  { title: 'Report', children: [
+  { title: 'General Settings', path: '/admin/setting', icon: Sliders },
+  { title: 'Report', icon: BarChart3, children: [
     { title: 'Call History', path: '/admin/call-history' },
     { title: 'Chat History', path: '/admin/chat-history' },
     { title: 'Report Requests', path: '/admin/report-requests' },
     { title: 'Report/Block', path: '/admin/report-blocks' },
   ]},
-  { title: 'Earning', children: [
+  { title: 'Earning', icon: Wallet, children: [
     { title: 'Withdrawal Requests', path: '/admin/withdrawals' },
     { title: 'Withdrawal Methods', path: '/admin/withdrawal-methods' },
     { title: 'Recharge History', path: '/admin/wallet-history' },
@@ -116,53 +123,108 @@ const Layout = ({ children }) => {
     navigate('/login');
   };
 
+  const isChildActive = (children) => {
+    return children?.some(child => location.pathname === child.path);
+  };
+
+  const userName = user?.name || 'Admin';
+  const userInitial = userName.charAt(0).toUpperCase();
+
   return (
     <div className="layout">
-      {/* Overlay for mobile */}
       {sidebarOpen && <div className="sidebar-overlay" onClick={closeSidebar}></div>}
-    
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
-          <h2>AstroGuru</h2>
-          <span className="admin-label">Admin Panel</span>
-          <button className="close-btn" onClick={closeSidebar}>✕</button>
+          <div className="sidebar-brand-icon">AG</div>
+          <div className="sidebar-brand-text">
+            <h2>AstroGuru</h2>
+            <span className="admin-label">Admin Panel</span>
+          </div>
+          <button className="close-btn" onClick={closeSidebar}><X size={18} /></button>
         </div>
+
         <nav className="sidebar-nav">
-          {menuItems.map((item, i) => (
-            <div key={i} className="menu-group">
-              {item.path ? (
-                <Link to={item.path} onClick={closeSidebar} className={`menu-item ${location.pathname === item.path ? 'active' : ''}`}>
-                  <span>{item.icon} {item.title}</span>
-                </Link>
-              ) : (
-                <>
-                  <div className="menu-item menu-parent" onClick={() => toggleMenu(i)}>
-                    <span>{item.title}</span>
-                    <span className={`arrow ${openMenus[i] ? 'open' : ''}`}>&#9656;</span>
-                  </div>
-                  {openMenus[i] && item.children && (
-                    <div className="submenu">
-                      {item.children.map((child, j) => (
-                        <Link key={j} to={child.path} onClick={closeSidebar} className={`submenu-item ${location.pathname === child.path ? 'active' : ''}`}>
-                          {child.title}
-                        </Link>
-                      ))}
+          {menuItems.map((item, i) => {
+            const IconComponent = item.icon;
+            return (
+              <div key={i} className="menu-group">
+                {item.path ? (
+                  <Link
+                    to={item.path}
+                    onClick={closeSidebar}
+                    className={`menu-item ${location.pathname === item.path ? 'active' : ''}`}
+                  >
+                    <span>
+                      <IconComponent size={17} className="menu-icon" />
+                      {item.title}
+                    </span>
+                  </Link>
+                ) : (
+                  <>
+                    <div
+                      className={`menu-item menu-parent ${openMenus[i] ? 'is-open' : ''} ${isChildActive(item.children) ? 'active' : ''}`}
+                      onClick={() => toggleMenu(i)}
+                    >
+                      <span>
+                        <IconComponent size={17} className="menu-icon" />
+                        {item.title}
+                      </span>
+                      <span className={`arrow ${openMenus[i] ? 'open' : ''}`}>&#9656;</span>
                     </div>
-                  )}
-                </>
-              )}
-            </div>
-          ))}
+                    {openMenus[i] && item.children && (
+                      <div className="submenu">
+                        {item.children.map((child, j) => (
+                          <Link
+                            key={j}
+                            to={child.path}
+                            onClick={closeSidebar}
+                            className={`submenu-item ${location.pathname === child.path ? 'active' : ''}`}
+                          >
+                            {child.title}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
         </nav>
+
+        <div className="sidebar-footer">
+          <button className="sidebar-logout-btn" onClick={handleLogout}>
+            <LogOut size={17} />
+            Logout
+          </button>
+        </div>
       </aside>
+
       <div className="main-content">
         <header className="topbar">
-          <button className="toggle-btn" onClick={toggleSidebar}>☰</button>
+          <div className="topbar-left">
+            <button className="toggle-btn" onClick={toggleSidebar}><Menu size={20} /></button>
+          </div>
+
           <div className="topbar-right">
-            <span className="user-name">{user?.name || 'Admin'}</span>
-            <button className="logout-btn" onClick={handleLogout}>Logout</button>
+            <button className="topbar-icon-btn" title="Notifications">
+              <Bell size={20} />
+              <span className="notification-dot"></span>
+            </button>
+
+            <div className="topbar-divider"></div>
+
+            <div className="user-profile">
+              <div className="user-avatar">{userInitial}</div>
+              <div className="user-info">
+                <span className="user-name">{userName}</span>
+                <span className="user-role">Administrator</span>
+              </div>
+            </div>
           </div>
         </header>
+
         <main className="content">{children}</main>
       </div>
     </div>

@@ -1,23 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import DataTable from '../components/DataTable';
-import Modal from '../components/Modal';
-import FormInput from '../components/FormInput';
 import { helpSupportApi } from '../api/services';
+import Loader from '../components/Loader';
+import Modal from '../components/Modal';
+import { CircleHelp, Pencil, Trash2, Plus, Eye, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
+import Swal from 'sweetalert2';
+import '../styles/Customers.css';
 
 const HelpSupport = () => {
-  // Main categories
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState(null);
 
-  // Sub categories
   const [subCategories, setSubCategories] = useState([]);
-  // Sub-sub categories
   const [subSubCategories, setSubSubCategories] = useState([]);
 
-  // Modal state
   const [showModal, setShowModal] = useState(false);
-  const [modalType, setModalType] = useState('category'); // 'category' | 'sub' | 'subsub'
+  const [modalType, setModalType] = useState('category');
   const [editData, setEditData] = useState(null);
   const [form, setForm] = useState({ name: '', title: '', description: '' });
   const [loading, setLoading] = useState(false);
@@ -89,9 +87,20 @@ const HelpSupport = () => {
   };
 
   const handleDeleteCategory = async (id) => {
-    if (window.confirm('Are you sure you want to delete this category?')) {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'This category will be deleted!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#7c3aed',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, Delete',
+      cancelButtonText: 'Cancel',
+    });
+    if (result.isConfirmed) {
       try {
         await helpSupportApi.delete({ id });
+        Swal.fire({ title: 'Deleted!', icon: 'success', confirmButtonColor: '#7c3aed', timer: 1500, showConfirmButton: false });
         fetchCategories();
         if (selectedCategory && selectedCategory.id === id) {
           setSelectedCategory(null);
@@ -100,7 +109,7 @@ const HelpSupport = () => {
           setSubSubCategories([]);
         }
       } catch (err) {
-        console.error('Error deleting category:', err);
+        Swal.fire({ title: 'Error!', text: 'Failed to delete category', icon: 'error', confirmButtonColor: '#7c3aed' });
       }
     }
   };
@@ -121,16 +130,27 @@ const HelpSupport = () => {
   };
 
   const handleDeleteSubCategory = async (id) => {
-    if (window.confirm('Are you sure you want to delete this sub-category?')) {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'This sub-category will be deleted!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#7c3aed',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, Delete',
+      cancelButtonText: 'Cancel',
+    });
+    if (result.isConfirmed) {
       try {
         await helpSupportApi.deleteSubCategory({ id });
+        Swal.fire({ title: 'Deleted!', icon: 'success', confirmButtonColor: '#7c3aed', timer: 1500, showConfirmButton: false });
         if (selectedCategory) fetchSubCategories(selectedCategory.id);
         if (selectedSubCategory && selectedSubCategory.id === id) {
           setSelectedSubCategory(null);
           setSubSubCategories([]);
         }
       } catch (err) {
-        console.error('Error deleting sub-category:', err);
+        Swal.fire({ title: 'Error!', text: 'Failed to delete sub-category', icon: 'error', confirmButtonColor: '#7c3aed' });
       }
     }
   };
@@ -151,12 +171,23 @@ const HelpSupport = () => {
   };
 
   const handleDeleteSubSubCategory = async (id) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'This item will be deleted!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#7c3aed',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, Delete',
+      cancelButtonText: 'Cancel',
+    });
+    if (result.isConfirmed) {
       try {
         await helpSupportApi.deleteSubSubCategory({ id });
+        Swal.fire({ title: 'Deleted!', icon: 'success', confirmButtonColor: '#7c3aed', timer: 1500, showConfirmButton: false });
         if (selectedSubCategory) fetchSubSubCategories(selectedSubCategory.id);
       } catch (err) {
-        console.error('Error deleting sub-sub-category:', err);
+        Swal.fire({ title: 'Error!', text: 'Failed to delete item', icon: 'error', confirmButtonColor: '#7c3aed' });
       }
     }
   };
@@ -200,127 +231,165 @@ const HelpSupport = () => {
     return `${action} Sub-Sub-Category`;
   };
 
-  const btnStyle = { padding: '4px 12px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' };
+  const getPageTitle = () => {
+    if (selectedSubCategory) return `Items in "${selectedSubCategory.name}"`;
+    if (selectedCategory) return `Sub-Categories of "${selectedCategory.name}"`;
+    return 'Help & Support';
+  };
 
-  const categoryColumns = [
-    { header: '#', render: (row, i) => i + 1 },
-    { header: 'Name', key: 'name' },
-    { header: 'Title', key: 'title' },
-    {
-      header: 'Actions',
-      render: (row) => (
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => { setSelectedCategory(row); setSelectedSubCategory(null); setSubSubCategories([]); }} style={{ ...btnStyle, background: '#10b981', color: '#fff' }}>View Sub</button>
-          <button onClick={() => openEditCategory(row)} style={{ ...btnStyle, background: '#3b82f6', color: '#fff' }}>Edit</button>
-          <button onClick={() => handleDeleteCategory(row.id)} style={{ ...btnStyle, background: '#ef4444', color: '#fff' }}>Delete</button>
-        </div>
-      )
-    }
-  ];
+  const getCount = () => {
+    if (selectedSubCategory) return subSubCategories.length;
+    if (selectedCategory) return subCategories.length;
+    return categories.length;
+  };
 
-  const subCategoryColumns = [
-    { header: '#', render: (row, i) => i + 1 },
-    { header: 'Name', key: 'name' },
-    { header: 'Title', key: 'title' },
-    {
-      header: 'Actions',
-      render: (row) => (
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => setSelectedSubCategory(row)} style={{ ...btnStyle, background: '#10b981', color: '#fff' }}>View Sub</button>
-          <button onClick={() => openEditSubCategory(row)} style={{ ...btnStyle, background: '#3b82f6', color: '#fff' }}>Edit</button>
-          <button onClick={() => handleDeleteSubCategory(row.id)} style={{ ...btnStyle, background: '#ef4444', color: '#fff' }}>Delete</button>
-        </div>
-      )
-    }
-  ];
+  const getCurrentData = () => {
+    if (selectedSubCategory) return subSubCategories;
+    if (selectedCategory) return subCategories;
+    return categories;
+  };
 
-  const subSubCategoryColumns = [
-    { header: '#', render: (row, i) => i + 1 },
-    { header: 'Name', key: 'name' },
-    { header: 'Title', key: 'title' },
-    { header: 'Description', render: (row) => row.description ? (row.description.length > 50 ? row.description.substring(0, 50) + '...' : row.description) : '-' },
-    {
-      header: 'Actions',
-      render: (row) => (
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => openEditSubSubCategory(row)} style={{ ...btnStyle, background: '#3b82f6', color: '#fff' }}>Edit</button>
-          <button onClick={() => handleDeleteSubSubCategory(row.id)} style={{ ...btnStyle, background: '#ef4444', color: '#fff' }}>Delete</button>
-        </div>
-      )
+  const handleBack = () => {
+    if (selectedSubCategory) {
+      setSelectedSubCategory(null);
+      setSubSubCategories([]);
+    } else if (selectedCategory) {
+      setSelectedCategory(null);
+      setSubCategories([]);
+      setSelectedSubCategory(null);
+      setSubSubCategories([]);
     }
-  ];
+  };
+
+  const handleAddClick = () => {
+    if (selectedSubCategory) openAddSubSubCategory();
+    else if (selectedCategory) openAddSubCategory();
+    else openAddCategory();
+  };
+
+  const getAddLabel = () => {
+    if (selectedSubCategory) return 'Add Item';
+    if (selectedCategory) return 'Add Sub-Category';
+    return 'Add Category';
+  };
+
+  const data = getCurrentData();
 
   return (
     <div>
-      {/* Breadcrumb */}
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '8px', alignItems: 'center', fontSize: '14px' }}>
-        <span onClick={() => { setSelectedCategory(null); setSelectedSubCategory(null); setSubCategories([]); setSubSubCategories([]); }} style={{ cursor: 'pointer', color: '#3b82f6', fontWeight: selectedCategory ? 400 : 600 }}>Categories</span>
-        {selectedCategory && (
-          <>
-            <span style={{ color: '#999' }}>/</span>
-            <span onClick={() => { setSelectedSubCategory(null); setSubSubCategories([]); }} style={{ cursor: 'pointer', color: '#3b82f6', fontWeight: selectedSubCategory ? 400 : 600 }}>{selectedCategory.name}</span>
-          </>
-        )}
-        {selectedSubCategory && (
-          <>
-            <span style={{ color: '#999' }}>/</span>
-            <span style={{ fontWeight: 600, color: '#333' }}>{selectedSubCategory.name}</span>
-          </>
-        )}
+      <div className="cust-topbar">
+        <div className="cust-topbar-left">
+          <CircleHelp size={25} color="#7c3aed" />
+          <div>
+            <h2 className="cust-title">{getPageTitle()}</h2>
+            <div className="cust-count">{getCount()} total</div>
+          </div>
+        </div>
+        <div className="cust-topbar-right">
+          {(selectedCategory || selectedSubCategory) && (
+            <button onClick={handleBack} className="cust-btn cust-btn-ghost">
+              <ArrowLeft size={15} /> Back
+            </button>
+          )}
+          <button onClick={handleAddClick} className="cust-btn cust-btn-primary">
+            <Plus size={15} /> {getAddLabel()}
+          </button>
+        </div>
       </div>
 
-      {/* Level 1: Main Categories */}
-      {!selectedCategory && (
-        <DataTable
-          title="Help & Support - Categories"
-          columns={categoryColumns}
-          data={categories}
-          headerActions={
-            <button onClick={openAddCategory} style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>+ Add Category</button>
-          }
-        />
-      )}
-
-      {/* Level 2: Sub Categories */}
-      {selectedCategory && !selectedSubCategory && (
-        <DataTable
-          title={`Sub-Categories of "${selectedCategory.name}"`}
-          columns={subCategoryColumns}
-          data={subCategories}
-          headerActions={
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => { setSelectedCategory(null); setSubCategories([]); }} style={{ padding: '8px 16px', background: '#6b7280', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Back</button>
-              <button onClick={openAddSubCategory} style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>+ Add Sub-Category</button>
-            </div>
-          }
-        />
-      )}
-
-      {/* Level 3: Sub-Sub Categories */}
-      {selectedSubCategory && (
-        <DataTable
-          title={`Items in "${selectedSubCategory.name}"`}
-          columns={subSubCategoryColumns}
-          data={subSubCategories}
-          headerActions={
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => { setSelectedSubCategory(null); setSubSubCategories([]); }} style={{ padding: '8px 16px', background: '#6b7280', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Back</button>
-              <button onClick={openAddSubSubCategory} style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>+ Add Item</button>
-            </div>
-          }
-        />
-      )}
+      <div className="cust-card">
+        {loading ? <Loader text="Loading..." /> : (
+          <div className="cust-table-wrap">
+            <table className="cust-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Title</th>
+                  {selectedSubCategory && <th>Description</th>}
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length === 0 ? (
+                  <tr><td colSpan={selectedSubCategory ? 5 : 4} className="cust-no-data">No data found.</td></tr>
+                ) : data.map((row, i) => (
+                  <tr key={row.id}>
+                    <td>{i + 1}</td>
+                    <td className="cust-name-cell">{row.name || '---'}</td>
+                    <td>{row.title || '---'}</td>
+                    {selectedSubCategory && (
+                      <td>{row.description ? (row.description.length > 50 ? row.description.substring(0, 50) + '...' : row.description) : '---'}</td>
+                    )}
+                    <td>
+                      <div className="cust-actions">
+                        {!selectedSubCategory && (
+                          <button
+                            onClick={() => {
+                              if (selectedCategory) {
+                                setSelectedSubCategory(row);
+                              } else {
+                                setSelectedCategory(row);
+                                setSelectedSubCategory(null);
+                                setSubSubCategories([]);
+                              }
+                            }}
+                            className="cust-action-btn cust-action-view"
+                            title="View Sub"
+                          >
+                            <Eye size={15} />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            if (selectedSubCategory) openEditSubSubCategory(row);
+                            else if (selectedCategory) openEditSubCategory(row);
+                            else openEditCategory(row);
+                          }}
+                          className="cust-action-btn cust-action-edit"
+                          title="Edit"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (selectedSubCategory) handleDeleteSubSubCategory(row.id);
+                            else if (selectedCategory) handleDeleteSubCategory(row.id);
+                            else handleDeleteCategory(row.id);
+                          }}
+                          className="cust-action-btn cust-action-delete"
+                          title="Delete"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Shared Modal */}
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={getModalTitle()}>
         <form onSubmit={handleSubmit}>
-          <FormInput label="Name" name="name" value={form.name} onChange={handleChange} required placeholder="Enter name" />
-          <FormInput label="Title" name="title" value={form.title} onChange={handleChange} placeholder="Enter title" />
-          <FormInput label="Description" type="textarea" name="description" value={form.description} onChange={handleChange} placeholder="Enter description" />
-          <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-            <button type="submit" style={{ padding: '10px 24px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>{editData ? 'Update' : 'Add'}</button>
-            <button type="button" onClick={() => setShowModal(false)} style={{ padding: '10px 24px', background: '#6b7280', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+          <div className="cust-form-group">
+            <label>Name *</label>
+            <input name="name" value={form.name} onChange={handleChange} required placeholder="Enter name" />
           </div>
+          <div className="cust-form-group">
+            <label>Title</label>
+            <input name="title" value={form.title} onChange={handleChange} placeholder="Enter title" />
+          </div>
+          <div className="cust-form-group">
+            <label>Description</label>
+            <textarea name="description" value={form.description} onChange={handleChange} placeholder="Enter description" />
+          </div>
+          <button type="submit" className="cust-btn cust-btn-primary cust-btn-full">
+            {editData ? 'Update' : 'Add'}
+          </button>
         </form>
       </Modal>
     </div>
