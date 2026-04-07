@@ -531,3 +531,10 @@ export const paymentApi = {
   getFailed: () => API.get('/payments/failed'),
   getSuccess: () => API.get('/payments/success')
 };
+
+// ==================== ADMIN NOTIFICATIONS ====================
+export const adminNotificationApi = {
+  getAll: (params) => API.get('/admin-notifications', { params }),
+  getUnreadCount: () => API.get('/admin-notifications/unread-count'),
+  markRead: (data) => API.post('/admin-notifications/mark-read', data)
+};

@@ -507,7 +507,9 @@ const Dashboard = () => {
                     <th>Type</th>
                     <th>Customer</th>
                     <th>Astrologer</th>
-                    <th>Amount</th>
+                    <th>Total</th>
+                    <th>Admin</th>
+                    <th>Astrologer</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -515,17 +517,19 @@ const Dashboard = () => {
                     <tr key={i}>
                       <td>{t.created_at ? new Date(t.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '-'}</td>
                       <td>
-                        <span className={`cust-req-badge ${t.type === 'Chat' ? 'blue' : t.type === 'Call' ? 'purple' : 'purple'}`}>
+                        <span className={`cust-req-badge ${t.type === 'Chat' ? 'blue' : 'purple'}`}>
                           {t.type}
                         </span>
                       </td>
                       <td>{t.userName || '-'}</td>
                       <td>{t.astrologerName || '-'}</td>
                       <td className="db-txn-amount">{'\u20B9'}{formatNumber(parseFloat(t.amount || 0))}</td>
+                      <td style={{color:'#d97706',fontWeight:600}}>{'\u20B9'}{formatNumber(parseFloat(t.adminEarning || 0))}</td>
+                      <td style={{color:'#059669',fontWeight:600}}>{'\u20B9'}{formatNumber(parseFloat(t.astrologerEarning || 0))}</td>
                     </tr>
                   ))}
                   {(!report.recentTransactions || report.recentTransactions.length === 0) && (
-                    <tr><td colSpan={5} className="db-no-data">No transactions found</td></tr>
+                    <tr><td colSpan={7} className="db-no-data">No transactions found</td></tr>
                   )}
                 </tbody>
               </table>

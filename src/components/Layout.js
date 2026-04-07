@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { adminNotificationApi } from '../api/services';
+import { io } from 'socket.io-client';
 import {
   LayoutDashboard, Users, Sparkles, ShoppingBag, Star, FileText,
   Newspaper, Video, TicketCheck, BookOpen, HandHeart, ScrollText,
@@ -99,12 +101,63 @@ const menuItems = [
   ]},
 ];
 
+const SOCKET_URL = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace('/api', '');
+
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openMenus, setOpenMenus] = useState({});
+  const [notifCount, setNotifCount] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const notifRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+
+  // Socket connection for admin notifications
+  useEffect(() => {
+    // Fetch initial unread count
+    adminNotificationApi.getUnreadCount().then(res => setNotifCount(res.data?.count || 0)).catch(() => {});
+
+    // Connect socket
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const socket = io(SOCKET_URL, { auth: { token }, transports: ['websocket', 'polling'] });
+    socket.on('connect', () => socket.emit('join-admin'));
+    socket.on('admin-notification', (notif) => {
+      setNotifications(prev => [notif, ...prev].slice(0, 20));
+    });
+    socket.on('admin-notification-count', (data) => setNotifCount(data.count));
+    return () => socket.disconnect();
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e) => { if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false); };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const openNotifications = async () => {
+    setNotifOpen(!notifOpen);
+    if (!notifOpen) {
+      setNotifLoading(true);
+      try {
+        const res = await adminNotificationApi.getAll({ page: 1 });
+        setNotifications(res.data?.notifications || []);
+      } catch(e) {}
+      setNotifLoading(false);
+    }
+  };
+
+  const markAllRead = async () => {
+    try {
+      await adminNotificationApi.markRead({});
+      setNotifCount(0);
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    } catch(e) {}
+  };
 
   const toggleMenu = (index) => {
     setOpenMenus(prev => ({ ...prev, [index]: !prev[index] }));
@@ -208,10 +261,32 @@ const Layout = ({ children }) => {
           </div>
 
           <div className="topbar-right">
-            <button className="topbar-icon-btn" title="Notifications">
-              <Bell size={20} />
-              <span className="notification-dot"></span>
-            </button>
+            <div className="notif-wrapper" ref={notifRef}>
+              <button className="topbar-icon-btn" title="Notifications" onClick={openNotifications}>
+                <Bell size={20} />
+                {notifCount > 0 && <span className="notif-badge">{notifCount > 99 ? '99+' : notifCount}</span>}
+              </button>
+              {notifOpen && (
+                <div className="notif-dropdown">
+                  <div className="notif-header">
+                    <span className="notif-title">Notifications</span>
+                    {notifCount > 0 && <button className="notif-mark-read" onClick={markAllRead}>Mark all read</button>}
+                  </div>
+                  <div className="notif-list">
+                    {notifLoading ? <div className="notif-empty">Loading...</div> :
+                      notifications.length === 0 ? <div className="notif-empty">No notifications</div> :
+                      notifications.map(n => (
+                        <div key={n.id} className={`notif-item ${n.isRead ? '' : 'unread'}`}>
+                          <div className="notif-item-title">{n.title}</div>
+                          <div className="notif-item-msg">{n.message}</div>
+                          <div className="notif-item-time">{n.created_at ? new Date(n.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</div>
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="topbar-divider"></div>
 
