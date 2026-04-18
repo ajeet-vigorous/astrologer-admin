@@ -187,8 +187,8 @@ const News = () => {
       <div className="cust-topbar">
         <div className="cust-topbar-left">
           <Newspaper size={20} className="cust-topbar-icon" />
-          <h2 className="cust-title">Astroguru News</h2>
-          <span className="cust-count">({totalRecords} total)</span>
+          <h2 className="cust-title">Astro Vell News</h2>
+          {/* <span className="cust-count">({ttalRecords} total)</span> */}
         </div>
         <div className="cust-topbar-right">
           <button className="cust-btn cust-btn-primary" onClick={() => { setForm({ ...emptyForm }); setShowAddModal(true); }}>

@@ -15,10 +15,12 @@ const BlockedAstrologers = () => {
     setLoading(true);
     try {
       const res = await blockAstrologerApi.getAll({ page, search });
-      setData(res.data.data || []);
-      setPagination(res.data.pagination || null);
+      const payload = res.data?.data || {};
+      setData(Array.isArray(payload.reportBlocks) ? payload.reportBlocks : []);
+      setPagination(payload);
     } catch (err) {
       console.error('Error fetching blocked astrologers:', err);
+      setData([]);
     }
     setLoading(false);
   };
@@ -130,35 +132,40 @@ const BlockedAstrologers = () => {
                 </tr>
               </thead>
               <tbody>
-                {data.length === 0 ? (
+                {data?.length === 0 ? (
                   <tr><td colSpan={6} className="cust-no-data">No blocked astrologers found.</td></tr>
-                ) : data.map((row, i) => (
-                  <tr key={row._id || row.id || i}>
+                ) : data?.map((row, i) => {
+                  const profileSrc = row.profile
+                    ? (row.profile.startsWith('http') ? row.profile : `http://localhost:5000/public/${row.profile}`)
+                    : fallbackSvg;
+                  return (
+                  <tr key={row.id || i}>
                     <td>{((page - 1) * 10) + i + 1}</td>
                     <td>
                       <img
-                        src={row.userImage || row.user?.image || row.user?.profileImage || fallbackSvg}
+                        src={profileSrc}
                         alt="User"
                         onError={(e) => { e.target.onerror = null; e.target.src = fallbackSvg; }}
                         className="cust-avatar"
                       />
                     </td>
                     <td>
-                      <div className="cust-name-cell">{row.userName || row.user?.name || '-'}</div>
-                      <div className="cust-date-cell">{row.userContactNumber || row.user?.contactNumber || row.user?.phone || ''}</div>
+                      <div className="cust-name-cell">{row.userName || '-'}</div>
+                      <div className="cust-date-cell">{row.contactNo || ''}</div>
                     </td>
                     <td>
-                      <div className="cust-name-cell">{row.astrologerName || row.astrologer?.name || '-'}</div>
-                      <div className="cust-date-cell">{row.astrologerContactNumber || row.astrologer?.contactNumber || row.astrologer?.phone || ''}</div>
+                      <div className="cust-name-cell">{row.astrologerName || '-'}</div>
+                      <div className="cust-date-cell">{row.astrologerContactNo || ''}</div>
                     </td>
                     <td>{row.reason ? (row.reason.length > 60 ? row.reason.substring(0, 60) + '...' : row.reason) : '-'}</td>
                     <td>
                       <span className="cust-date-cell">
-                        <Calendar size={12} /> {formatDate(row.createdAt)}
+                        <Calendar size={12} /> {formatDate(row.created_at || row.createdAt)}
                       </span>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

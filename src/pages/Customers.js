@@ -314,7 +314,7 @@ const Customers = () => {
                     <td>{(pagination?.start || 1) + i}</td>
                     <td>
                       <img
-                        src={c.profile ? (c.profile.startsWith('http') ? c.profile : `/public/${c.profile}`) : 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect width="36" height="36" fill="%23e5e7eb" rx="18"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="14" fill="%23999">?</text></svg>'}
+                        src={c.profile ? (c.profile.startsWith('http') ? c.profile : `http://localhost:5000/public/${c.profile}`) : 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect width="36" height="36" fill="%23e5e7eb" rx="18"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="14" fill="%23999">?</text></svg>'}
                         alt="" className="cust-avatar"
                         onError={e => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect width="36" height="36" fill="%23e5e7eb" rx="18"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="14" fill="%23999">?</text></svg>'; }}
                       />

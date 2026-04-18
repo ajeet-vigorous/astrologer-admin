@@ -272,7 +272,7 @@ const Astrologers = () => {
                     <td>{(pagination?.start || 1) + i}</td>
                     <td>
                       <img
-                        src={row.profileImage ? (row.profileImage.startsWith('http') ? row.profileImage : `/public/${row.profileImage}`) : fallbackSvg}
+                        src={row.profileImage ? (row.profileImage.startsWith('http') ? row.profileImage : `http://localhost:5000/${row.profileImage}`) : fallbackSvg}
                         alt="" className="cust-avatar"
                         onError={e => { e.target.src = fallbackSvg; }}
                       />

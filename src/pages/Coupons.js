@@ -79,6 +79,16 @@ const Coupons = () => {
     }
   };
 
+  const handleDelete = async (row) => {
+    if (!window.confirm(`Delete coupon "${row.couponCode}"? This cannot be undone.`)) return;
+    try {
+      await couponApi.delete({ del_id: row.id });
+      fetchData();
+    } catch (e) {
+      alert(e.response?.data?.message || e.message);
+    }
+  };
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -106,6 +116,7 @@ const Coupons = () => {
       header: 'Actions', render: (row) => (
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => handleEdit(row)} style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '5px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>Edit</button>
+          <button onClick={() => handleDelete(row)} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '5px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>Delete</button>
         </div>
       )
     }

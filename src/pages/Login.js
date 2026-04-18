@@ -33,7 +33,7 @@ const Login = () => {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h1>Astroguru</h1>
+        <h1>AstroVell</h1>
         <h2>Admin Login</h2>
 
         {errorMsg && <div className="error-message">{errorMsg}</div>}

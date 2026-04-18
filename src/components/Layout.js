@@ -43,7 +43,7 @@ const menuItems = [
     { title: 'Horoscope Feedback', path: '/admin/horoscope-feedback' },
   ]},
   { title: 'Blogs', path: '/admin/blogs', icon: FileText },
-  { title: 'Astroguru News', path: '/admin/news', icon: Newspaper },
+  { title: 'Astro News', path: '/admin/news', icon: Newspaper },
   { title: 'Videos Ads', path: '/admin/ads-videos', icon: Video },
   { title: 'Support Tickets', path: '/admin/tickets', icon: TicketCheck },
   { title: 'Stories', path: '/admin/stories', icon: BookOpen },
@@ -80,6 +80,7 @@ const menuItems = [
     { title: 'Notifications', path: '/admin/notifications' },
     { title: 'Help Support', path: '/admin/help-support' },
     { title: 'Recharge Amount', path: '/admin/recharge' },
+    { title: 'Coupons', path: '/admin/coupons' },
   ]},
   { title: 'Team Management', icon: UsersRound, children: [
     { title: 'Team Roles', path: '/admin/team-roles' },
@@ -189,9 +190,9 @@ const Layout = ({ children }) => {
 
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
-          <div className="sidebar-brand-icon">AG</div>
+          <div className="sidebar-brand-icon">AV</div>
           <div className="sidebar-brand-text">
-            <h2>AstroGuru</h2>
+            <h2>Astrovell</h2>
             <span className="admin-label">Admin Panel</span>
           </div>
           <button className="close-btn" onClick={closeSidebar}><X size={18} /></button>

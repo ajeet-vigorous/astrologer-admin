@@ -71,7 +71,8 @@ export const couponApi = {
   getAll: (params) => API.get('/coupons', { params }),
   add: (data) => API.post('/coupons/add', data),
   edit: (data) => API.post('/coupons/edit', data),
-  status: (data) => API.post('/coupons/status', data)
+  status: (data) => API.post('/coupons/status', data),
+  delete: (data) => API.post('/coupons/delete', data)
 };
 
 // ==================== NOTIFICATIONS ====================
