@@ -25,7 +25,7 @@ const WeeklyHoroscope = () => {
     try {
       const res = await horoscopeApi.getWeeklyList({ page, filterDate });
       const d = res.data?.data || res.data || {};
-      setData(d.dailyHoroscope || []);
+      setData(d.weeklyHoroscope || d.dailyHoroscope || d.recordList || d.list || []);
       setTotalPages(d.totalPages || 1);
       setTotalRecords(d.totalRecords || 0);
       setStart(d.start || 0);

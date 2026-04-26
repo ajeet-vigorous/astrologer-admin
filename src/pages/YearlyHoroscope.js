@@ -9,23 +9,26 @@ import 'react-datepicker/dist/react-datepicker.css';
 import '../styles/Customers.css';
 
 const YearlyHoroscope = () => {
-  const today = new Date().toISOString().split('T')[0];
   const [data, setData] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [start, setStart] = useState(0);
   const [end, setEnd] = useState(0);
-  const [filterDate, setFilterDate] = useState(today);
-  const [inputDate, setInputDate] = useState(moment().toDate());
+  // Yearly horoscopes are generated once and not bound to today's date —
+  // start with NO date filter so all yearly records show up by default.
+  const [filterDate, setFilterDate] = useState('');
+  const [inputDate, setInputDate] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await horoscopeApi.getYearlyList({ page, filterDate });
+      const params = { page };
+      if (filterDate) params.filterDate = filterDate;
+      const res = await horoscopeApi.getYearlyList(params);
       const d = res.data?.data || res.data || {};
-      setData(d.dailyHoroscope || []);
+      setData(d.yearlyHoroscope || d.dailyHoroscope || d.recordList || d.list || []);
       setTotalPages(d.totalPages || 1);
       setTotalRecords(d.totalRecords || 0);
       setStart(d.start || 0);
@@ -43,7 +46,13 @@ const YearlyHoroscope = () => {
 
   const handleApply = () => {
     setPage(1);
-    setFilterDate(moment(inputDate).format('YYYY-MM-DD'));
+    setFilterDate(inputDate ? moment(inputDate).format('YYYY-MM-DD') : '');
+  };
+
+  const handleClear = () => {
+    setInputDate(null);
+    setPage(1);
+    setFilterDate('');
   };
 
   const getFirst5Words = (text) => {
@@ -125,6 +134,11 @@ const YearlyHoroscope = () => {
             <button onClick={handleApply} className="cust-btn cust-btn-primary">
               Apply
             </button>
+            {filterDate && (
+              <button onClick={handleClear} className="cust-btn" style={{ marginLeft: 8, background: '#f3f0fa', color: '#7c3aed' }}>
+                Clear
+              </button>
+            )}
           </div>
         </div>
       </div>
