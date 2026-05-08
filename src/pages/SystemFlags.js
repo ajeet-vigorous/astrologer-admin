@@ -124,6 +124,22 @@ const SystemFlags = () => {
   const renderFlag = (flag, groupIndex, flagIndex, isSubGroup = false, subGroupIndex = null) => {
     const { valueType, displayName, description, name, value } = flag;
     if (name === 'appDesignId') return null;
+    // Hide unused calling provider fields — keep only those actually read by callProvider.js
+    //
+    // AGORA (used: AgoraAppId, AgoraAppCertificate)
+    //   AgoraKey / AgoraSecret  — Agora REST API customer creds (recording/console — not in current code)
+    //   AgoraAppIdForPuja        — orphan flag, zero code references
+    //
+    // ZEGOCLOUD (used: zegoAppId, zegoServerSecret, zegoApiUrl, zegoAppSign — all lowercase z)
+    //   ZegoAppId  (capital Z)   — duplicate of zegoAppId, code uses lowercase
+    //   ZegoSecretKey            — unused; code uses zegoServerSecret
+    //
+    // 100ms (HMS): all 6 fields actively used — none hidden.
+    const HIDDEN_FLAGS = [
+      'AgoraKey', 'AgoraSecret', 'AgoraAppIdForPuja',
+      'ZegoAppId', 'ZegoSecretKey',
+    ];
+    if (HIDDEN_FLAGS.includes(name)) return null;
 
     if (valueType === 'Text' || valueType === 'Number') {
       return (

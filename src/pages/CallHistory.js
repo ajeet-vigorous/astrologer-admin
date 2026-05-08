@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { callHistoryApi } from '../api/services';
 import Loader from '../components/Loader';
 import formatNumber from '../utils/formatNumber';
-import { Phone, FileText, FileSpreadsheet, Search, X, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Phone, FileText, FileSpreadsheet, Search, X, Calendar, ChevronLeft, ChevronRight, XCircle, Video, Activity } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import moment from 'moment';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -17,6 +17,7 @@ const CallHistory = () => {
   const [toDate, setToDate] = useState(moment().toDate());
   const [dateApplied, setDateApplied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [qualityModal, setQualityModal] = useState(null); // { callId, summary, loading }
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -104,6 +105,62 @@ const CallHistory = () => {
       case 'missed': return 'unverified';
       case 'ongoing': return 'purple';
       default: return 'verified';
+    }
+  };
+
+  // Active call states where admin can force-cancel
+  const isActiveCall = (status) => ['Pending', 'Ready', 'Accepted'].includes(status);
+
+  const handleForceCancel = async (callId, customerName, astrologerName) => {
+    const reason = window.prompt(
+      `Force-cancel call between ${customerName || 'customer'} and ${astrologerName || 'astrologer'}?\n\nEnter reason (will be logged):`
+    );
+    if (!reason || !reason.trim()) return;
+    const refundStr = window.prompt(
+      `Refund amount (₹). Leave blank to auto-refund deducted amount:`,
+      ''
+    );
+    const refundAmount = refundStr === null ? null : parseFloat(refundStr);
+    try {
+      const res = await callHistoryApi.forceCancel({
+        callId,
+        reason: reason.trim(),
+        ...(refundAmount && !isNaN(refundAmount) ? { refundAmount } : {}),
+      });
+      const r = res.data || {};
+      if (r.status === 200) {
+        window.alert(`Call cancelled. ₹${r.refundAmount || 0} refunded.`);
+        fetchData();
+      } else {
+        window.alert(r.message || 'Cancellation failed');
+      }
+    } catch (e) {
+      window.alert('Error: ' + (e.response?.data?.message || e.message));
+    }
+  };
+
+  const handleViewQuality = async (callId) => {
+    setQualityModal({ callId, summary: null, loading: true });
+    try {
+      const res = await callHistoryApi.getMetrics(callId);
+      setQualityModal({ callId, summary: res.data, loading: false });
+    } catch (e) {
+      setQualityModal({ callId, summary: null, loading: false, error: e.response?.data?.message || e.message });
+    }
+  };
+
+  const handleViewRecording = async (callId) => {
+    try {
+      const res = await callHistoryApi.getRecording(callId);
+      const d = res.data?.data;
+      if (!d) { window.alert('Recording info not found'); return; }
+      if (d.recording_url) {
+        window.open(d.recording_url, '_blank', 'noopener');
+      } else {
+        window.alert(`No recording available. Status: ${d.recording_status || 'not recorded'}`);
+      }
+    } catch (e) {
+      window.alert('Error: ' + (e.response?.data?.message || e.message));
     }
   };
 
@@ -260,20 +317,25 @@ const CallHistory = () => {
                   <th>Ended By</th>
                   <th>Status</th>
                   <th>Date</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {data.length === 0 ? (
-                  <tr><td colSpan={13} className="cust-no-data">No call history found.</td></tr>
+                  <tr><td colSpan={14} className="cust-no-data">No call history found.</td></tr>
                 ) : data.map((row, i) => {
                   const status = row.status || 'completed';
                   const callType = row.callType || row.call_type || 'Audio';
+                  const rawStatus = row.callStatus || row.status;
+                  const callId = row.id || row._id;
+                  const customerName = row.customerName || row.customer?.name;
+                  const astrologerName = row.astrologerName || row.astrologer?.name;
                   return (
                     <tr key={row._id || row.id || i}>
                       <td>{(pagination?.start || ((page - 1) * 10 + 1)) + i}</td>
-                      <td className="cust-name-cell">{row.customerName || row.customer?.name || '-'}</td>
+                      <td className="cust-name-cell">{customerName || '-'}</td>
                       <td>{row.customerPhone || row.customer?.phone || row.customer?.contactNo || '-'}</td>
-                      <td>{row.astrologerName || row.astrologer?.name || '-'}</td>
+                      <td>{astrologerName || '-'}</td>
                       <td>{row.callRate != null ? formatNumber(row.callRate) : '-'}</td>
                       <td>{row.totalMinutes || row.totalMin || row.duration || '0'}</td>
                       <td>{row.deduction != null ? formatNumber(row.deduction) : row.totalDeduction != null ? formatNumber(row.totalDeduction) : '-'}</td>
@@ -294,6 +356,47 @@ const CallHistory = () => {
                         </span>
                       </td>
                       <td className="cust-date-cell">{formatDateTime(row.createdAt || row.created_at)}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          {isActiveCall(rawStatus) && callId && (
+                            <button
+                              onClick={() => handleForceCancel(callId, customerName, astrologerName)}
+                              title="Force-cancel & refund"
+                              style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            >
+                              <XCircle size={12} /> Cancel
+                            </button>
+                          )}
+                          {row.recording_url ? (
+                            <button
+                              onClick={() => window.open(row.recording_url, '_blank', 'noopener')}
+                              title="Open recording"
+                              style={{ background: '#7c3aed', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            >
+                              <Video size={12} /> Recording
+                            </button>
+                          ) : row.recording_status === 'recording' ? (
+                            <span style={{ fontSize: 11, color: '#dc2626' }}>● REC</span>
+                          ) : callId && rawStatus === 'Completed' ? (
+                            <button
+                              onClick={() => handleViewRecording(callId)}
+                              title="Check recording"
+                              style={{ background: 'transparent', color: '#7c3aed', border: '1px solid #7c3aed', padding: '4px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}
+                            >
+                              <Video size={12} />
+                            </button>
+                          ) : null}
+                          {callId && (
+                            <button
+                              onClick={() => handleViewQuality(callId)}
+                              title="Call quality stats"
+                              style={{ background: 'transparent', color: '#0ea5e9', border: '1px solid #0ea5e9', padding: '4px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            >
+                              <Activity size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -303,6 +406,81 @@ const CallHistory = () => {
         )}
         {renderPagination()}
       </div>
+
+      {/* Call Quality Modal */}
+      {qualityModal && (
+        <div
+          onClick={() => setQualityModal(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: '#fff', borderRadius: 12, padding: 24, minWidth: 480, maxWidth: 640, maxHeight: '85vh', overflowY: 'auto' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, color: '#0f172a' }}>
+                <Activity size={20} style={{ verticalAlign: 'middle', marginRight: 8, color: '#0ea5e9' }} />
+                Call Quality — #{qualityModal.callId}
+              </h3>
+              <button onClick={() => setQualityModal(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                <X size={20} />
+              </button>
+            </div>
+            {qualityModal.loading ? (
+              <p style={{ color: '#64748b' }}>Loading metrics...</p>
+            ) : qualityModal.error ? (
+              <p style={{ color: '#dc2626' }}>{qualityModal.error}</p>
+            ) : !qualityModal.summary ? (
+              <p style={{ color: '#64748b' }}>No metrics available for this call.</p>
+            ) : (
+              <div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 16 }}>
+                  <div style={{ padding: 12, background: '#f1f5f9', borderRadius: 8 }}>
+                    <div style={{ fontSize: 11, color: '#64748b' }}>Total Events</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: '#0f172a' }}>{qualityModal.summary.totalEvents || 0}</div>
+                  </div>
+                  <div style={{ padding: 12, background: '#fef2f2', borderRadius: 8 }}>
+                    <div style={{ fontSize: 11, color: '#991b1b' }}>Drops + Disconnects</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: '#dc2626' }}>{qualityModal.summary.drops || 0}</div>
+                  </div>
+                  <div style={{ padding: 12, background: '#fefce8', borderRadius: 8 }}>
+                    <div style={{ fontSize: 11, color: '#854d0e' }}>Reconnects</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: '#ca8a04' }}>{qualityModal.summary.reconnects || 0}</div>
+                  </div>
+                  <div style={{ padding: 12, background: '#f0fdf4', borderRadius: 8 }}>
+                    <div style={{ fontSize: 11, color: '#166534' }}>Avg Bitrate (kbps)</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: '#16a34a' }}>{qualityModal.summary.avgBitrate || '-'}</div>
+                  </div>
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>Network Quality (1=excellent, 6=down)</div>
+                  <div style={{ fontSize: 14 }}>
+                    Avg: <strong>{qualityModal.summary.avgQuality || '-'}</strong>
+                    {qualityModal.summary.worstQuality != null && (
+                      <span style={{ marginLeft: 16 }}>Worst: <strong style={{ color: qualityModal.summary.worstQuality >= 4 ? '#dc2626' : '#0f172a' }}>{qualityModal.summary.worstQuality}</strong></span>
+                    )}
+                  </div>
+                </div>
+                {qualityModal.summary.timeline?.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>Event Timeline (last {qualityModal.summary.timeline.length})</div>
+                    <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 6, padding: 8, fontSize: 11, fontFamily: 'monospace' }}>
+                      {qualityModal.summary.timeline.slice(-50).map((ev, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 8, padding: '2px 0', borderBottom: '1px dashed #f1f5f9' }}>
+                          <span style={{ color: '#94a3b8' }}>{new Date(ev.created_at).toLocaleTimeString()}</span>
+                          <span style={{ color: ev.userType === 'system' ? '#dc2626' : ev.userType === 'astrologer' ? '#7c3aed' : '#0ea5e9', minWidth: 70 }}>{ev.userType}</span>
+                          <span style={{ color: '#0f172a', fontWeight: 600 }}>{ev.event_type}</span>
+                          {ev.value != null && <span style={{ color: '#64748b' }}>= {ev.value}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

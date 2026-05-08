@@ -217,7 +217,10 @@ export const fcmApi = {
 export const callHistoryApi = {
   getAll: (params) => API.get('/call-history', { params }),
   printPdf: (params) => API.get('/call-history/print', { params, responseType: 'blob' }),
-  exportCsv: (params) => API.get('/call-history/export-csv', { params, responseType: 'blob' })
+  exportCsv: (params) => API.get('/call-history/export-csv', { params, responseType: 'blob' }),
+  getRecording: (callId) => API.get('/call-history/recording', { params: { callId } }),
+  forceCancel: (body) => API.post('/call-history/forceCancel', body),
+  getMetrics: (callId) => API.get('/call-history/metrics', { params: { callId } }),
 };
 
 export const chatHistoryApi = {
