@@ -39,6 +39,19 @@ export const astrologerApi = {
   updateCommission: (data) => API.post('/astrologers/update-commission', data)
 };
 
+// ==================== BANK UPDATE REQUESTS ====================
+export const bankUpdateApi = {
+  list: (data) => API.post('/bank-update/list', data),
+  review: (data) => API.post('/bank-update/review', data),
+};
+
+// ==================== FORM 16A (TDS CERTIFICATE) ====================
+export const form16aApi = {
+  list: (data) => API.post('/form16a/list', data),
+  upload: (data) => API.post('/form16a/upload', data),
+  delete: (data) => API.post('/form16a/delete', data),
+};
+
 // ==================== SKILLS ====================
 export const skillApi = {
   getAll: (params) => API.get('/skills', { params }),

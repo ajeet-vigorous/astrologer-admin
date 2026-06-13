@@ -79,7 +79,7 @@ const AstrologerForm = () => {
             ifscCode: a.ifscCode || '', bankName: a.bankName || '', bankBranch: a.bankBranch || '',
             accountType: a.accountType || 'Savings', upi: a.upi || '',
             experienceInYears: a.experienceInYears || '', dailyContribution: a.dailyContribution || '',
-            hearAboutAstroguru: a.hearAboutAstroguru || '', isWorkingOnAnotherPlatform: a.isWorkingOnAnotherPlatform || '',
+            hearAboutAstroguru: a.hearAboutAstroguru || '', isWorkingOnAnotherPlatform: a.isWorkingOnAnotherPlatform != null ? String(a.isWorkingOnAnotherPlatform) : '',
             whyOnBoard: a.whyOnBoard || '', interviewSuitableTime: a.interviewSuitableTime || '',
             currentCity: a.currentCity || '', mainSourceOfBusiness: a.mainSourceOfBusiness || '',
             highestQualification: a.highestQualification || '', degree: a.degree || '', college: a.college || '',
@@ -92,7 +92,7 @@ const AstrologerForm = () => {
             monthlyEarning: a.monthlyEarning || '', referedPerson: a.referedPerson || '',
             instaProfileLink: a.instaProfileLink || '', linkedInProfileLink: a.linkedInProfileLink || '',
             facebookProfileLink: a.facebookProfileLink || '', websiteProfileLink: a.websiteProfileLink || '',
-            youtubeChannelLink: a.youtubeChannelLink || '', isAnyBodyRefer: a.isAnyBodyRefer || '',
+            youtubeChannelLink: a.youtubeChannelLink || '', isAnyBodyRefer: a.isAnyBodyRefer != null ? String(a.isAnyBodyRefer) : '',
             astrologerAvailability: a.astrologerAvailability?.length > 0 ? a.astrologerAvailability : prev.astrologerAvailability
           }));
         }
@@ -128,9 +128,24 @@ const AstrologerForm = () => {
     setSaving(true); setErrors({});
     try {
       const res = isEdit ? await astrologerApi.edit({ ...form }) : await astrologerApi.add({ ...form });
-      if (res.data.error && typeof res.data.error === 'object' && !Array.isArray(res.data.error)) { setErrors(res.data.error); setSaving(false); return; }
-      alert(isEdit ? 'Astrologer updated!' : 'Astrologer added!');
-      navigate('/admin/astrologers');
+      if (res.data.error && typeof res.data.error === 'object' && !Array.isArray(res.data.error)) {
+        setErrors(res.data.error);
+        // The whole save (including Availability) is rejected if any required Basic field
+        // is missing. Surface it even when the user is on another tab.
+        const fields = Object.keys(res.data.error);
+        // 'charge' lives on the Skills tab; the rest are on Personal.
+        setActiveTab(fields.length === 1 && fields[0] === 'charge' ? 'skill' : 'personal');
+        alert('Cannot save. Please fill the required field(s): ' + fields.join(', '));
+        setSaving(false);
+        return;
+      }
+      alert(isEdit ? 'Astrologer updated!' : 'Astrologer created! Continue filling the remaining details.');
+      if (!isEdit && res.data.astrologerId) {
+        // Continue to edit: open the new astrologer's edit page to fill the rest.
+        navigate(`/admin/astrologers/edit/${res.data.astrologerId}`);
+      } else {
+        navigate('/admin/astrologers');
+      }
     } catch (e) { alert('Error: ' + (e.response?.data?.message || e.message)); }
     setSaving(false);
   };
@@ -174,6 +189,12 @@ const AstrologerForm = () => {
             <Field label="Email" req><input className="af-input" type="email" value={form.email} onChange={e => h('email', e.target.value)} placeholder="Enter email" />{err('email')}</Field>
             <Field label="Country Code"><input className="af-input" value={form.countryCode} onChange={e => h('countryCode', e.target.value)} placeholder="+91" /></Field>
             <Field label="Contact Number" req><input className="af-input" value={form.contactNo} onChange={e => h('contactNo', e.target.value)} placeholder="Contact number" />{err('contactNo')}</Field>
+            <Field label="Gender" req>
+              <select className="af-select" value={form.gender} onChange={e => h('gender', e.target.value)}>
+                <option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option>
+              </select>{err('gender')}
+            </Field>
+            <Field label="Birth Date" req><input className="af-input" type="date" value={form.birthDate} onChange={e => h('birthDate', e.target.value)} />{err('birthDate')}</Field>
             <Field label="Country"><input className="af-input" value={form.country} onChange={e => h('country', e.target.value)} /></Field>
             <Field label="WhatsApp" req><input className="af-input" value={form.whatsappNo} onChange={e => h('whatsappNo', e.target.value)} placeholder="WhatsApp number" />{err('whatsappNo')}</Field>
             <Field label="Aadhar No" req><input className="af-input" value={form.aadharNo} onChange={e => h('aadharNo', e.target.value)} />{err('aadharNo')}</Field>
@@ -191,12 +212,6 @@ const AstrologerForm = () => {
         {/* Skills & Rates */}
         {activeTab === 'skill' && (
           <div className="af-grid">
-            <Field label="Gender" req>
-              <select className="af-select" value={form.gender} onChange={e => h('gender', e.target.value)}>
-                <option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option>
-              </select>{err('gender')}
-            </Field>
-            <Field label="Birth Date" req><input className="af-input" type="date" value={form.birthDate} onChange={e => h('birthDate', e.target.value)} />{err('birthDate')}</Field>
             <MultiField label="Category" req items={categories} nameKey="name" selected={form.astrologerCategoryId} onChange={v => handleMulti('astrologerCategoryId', v)} error={err('astrologerCategoryId')} />
             <MultiField label="Primary Skills" req items={skills} nameKey="name" selected={form.primarySkill} onChange={v => handleMulti('primarySkill', v)} error={err('primarySkill')} />
             <MultiField label="All Skills" req items={skills} nameKey="name" selected={form.allSkill} onChange={v => handleMulti('allSkill', v)} error={err('allSkill')} />
@@ -205,10 +220,7 @@ const AstrologerForm = () => {
             <Field label="Call Rate (INR/min)" req><input className="af-input" type="number" value={form.charge} onChange={e => h('charge', e.target.value)} placeholder="0" />{err('charge')}</Field>
             <Field label="Video Call (INR/min)"><input className="af-input" type="number" value={form.videoCallRate} onChange={e => h('videoCallRate', e.target.value)} placeholder="0" /></Field>
             <Field label="Report Rate (INR)"><input className="af-input" type="number" value={form.reportRate} onChange={e => h('reportRate', e.target.value)} placeholder="0" /></Field>
-            <h4 className="af-section-title">Charges (USD)</h4>
-            <Field label="Call Rate (USD/min)"><input className="af-input" type="number" value={form.charge_usd} onChange={e => h('charge_usd', e.target.value)} placeholder="0" /></Field>
-            <Field label="Video Call (USD/min)"><input className="af-input" type="number" value={form.videoCallRate_usd} onChange={e => h('videoCallRate_usd', e.target.value)} placeholder="0" /></Field>
-            <Field label="Report Rate (USD)"><input className="af-input" type="number" value={form.reportRate_usd} onChange={e => h('reportRate_usd', e.target.value)} placeholder="0" /></Field>
+
           </div>
         )}
 
@@ -240,7 +252,7 @@ const AstrologerForm = () => {
               {mainSourceBusiness.length > 0 ? (
                 <select className="af-select" value={form.mainSourceOfBusiness} onChange={e => h('mainSourceOfBusiness', e.target.value)}>
                   <option value="">-- Select --</option>
-                  {mainSourceBusiness.map(m => <option key={m.id} value={m.name || m.id}>{m.name}</option>)}
+                  {mainSourceBusiness?.map(m => <option key={m.id} value={m.name || m.id}>{m.name}</option>)}
                 </select>
               ) : <input className="af-input" value={form.mainSourceOfBusiness} onChange={e => h('mainSourceOfBusiness', e.target.value)} />}
               {err('mainSourceOfBusiness')}
@@ -258,7 +270,13 @@ const AstrologerForm = () => {
             <Field label="College"><input className="af-input" value={form.college} onChange={e => h('college', e.target.value)} /></Field>
             <Field label="Learn Astrology"><input className="af-input" value={form.learnAstrology} onChange={e => h('learnAstrology', e.target.value)} /></Field>
             <Field label="Hear About Us"><input className="af-input" value={form.hearAboutAstroguru} onChange={e => h('hearAboutAstroguru', e.target.value)} /></Field>
-            <Field label="Another Platform"><input className="af-input" value={form.isWorkingOnAnotherPlatform} onChange={e => h('isWorkingOnAnotherPlatform', e.target.value)} placeholder="Yes/No" /></Field>
+            <Field label="Another Platform">
+              <select className="af-select" value={form.isWorkingOnAnotherPlatform} onChange={e => h('isWorkingOnAnotherPlatform', e.target.value)}>
+                <option value="">Select</option>
+                <option value="1">Yes</option>
+                <option value="0">No</option>
+              </select>
+            </Field>
             <Field label="Platform Name"><input className="af-input" value={form.nameofplateform} onChange={e => h('nameofplateform', e.target.value)} /></Field>
             <Field label="Monthly Earning"><input className="af-input" type="number" value={form.monthlyEarning} onChange={e => h('monthlyEarning', e.target.value)} /></Field>
             <Field label="Min Earning" req><input className="af-input" type="number" value={form.minimumEarning} onChange={e => h('minimumEarning', e.target.value)} />{err('minimumEarning')}</Field>
@@ -271,7 +289,13 @@ const AstrologerForm = () => {
             <div className="af-field af-full"><label className="af-label">What Will You Do <span className="af-req">*</span></label><textarea className="af-textarea" value={form.whatwillDo} onChange={e => h('whatwillDo', e.target.value)} />{err('whatwillDo')}</div>
             <div className="af-field af-full"><label className="af-label">Login Bio</label><textarea className="af-textarea" value={form.loginBio} onChange={e => h('loginBio', e.target.value)} style={{ minHeight: 90 }} /></div>
             <h4 className="af-section-title">Referral & Social</h4>
-            <Field label="Anybody Refer"><input className="af-input" value={form.isAnyBodyRefer} onChange={e => h('isAnyBodyRefer', e.target.value)} /></Field>
+            <Field label="Anybody Refer">
+              <select className="af-select" value={form.isAnyBodyRefer} onChange={e => h('isAnyBodyRefer', e.target.value)}>
+                <option value="">Select</option>
+                <option value="1">Yes</option>
+                <option value="0">No</option>
+              </select>
+            </Field>
             <Field label="Referred Person"><input className="af-input" value={form.referedPerson} onChange={e => h('referedPerson', e.target.value)} /></Field>
             <Field label="Instagram"><input className="af-input" value={form.instaProfileLink} onChange={e => h('instaProfileLink', e.target.value)} /></Field>
             <Field label="LinkedIn"><input className="af-input" value={form.linkedInProfileLink} onChange={e => h('linkedInProfileLink', e.target.value)} /></Field>
@@ -324,7 +348,7 @@ const AstrologerForm = () => {
         <div className="af-footer">
           <button onClick={() => navigate('/admin/astrologers')} className="af-btn-cancel">Cancel</button>
           <button onClick={handleSubmit} disabled={saving} className="af-btn-submit">
-            {saving ? 'Saving...' : (isEdit ? 'Update Astrologer' : 'Add Astrologer')}
+            {saving ? 'Saving...' : (isEdit ? 'Update Astrologer' : 'Create & Continue to Edit')}
           </button>
         </div>
       </div>

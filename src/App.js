@@ -43,6 +43,8 @@ import Orders from './pages/Orders';
 import DefaultImages from './pages/DefaultImages';
 import SystemFlags from './pages/SystemFlags';
 import Withdrawals from './pages/Withdrawals';
+import BankUpdateRequests from './pages/BankUpdateRequests';
+import Form16A from './pages/Form16A';
 import ReportBlocks from './pages/ReportBlocks';
 import BlockedAstrologers from './pages/BlockedAstrologers';
 import Reports from './pages/Reports';
@@ -151,6 +153,8 @@ function App() {
                   <Route path="system-flags" element={<SystemFlags />} />
                   <Route path="setting" element={<SystemFlags />} />
                   <Route path="withdrawals" element={<Withdrawals />} />
+                  <Route path="bank-update-requests" element={<BankUpdateRequests />} />
+                  <Route path="form-16a" element={<Form16A />} />
                   <Route path="report-blocks" element={<ReportBlocks />} />
                   <Route path="blocked-astrologers" element={<BlockedAstrologers />} />
                   <Route path="reports" element={<Reports />} />

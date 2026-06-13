@@ -95,6 +95,8 @@ const menuItems = [
   ]},
   { title: 'Earning', icon: Wallet, children: [
     { title: 'Withdrawal Requests', path: '/admin/withdrawals' },
+    { title: 'Bank Update Requests', path: '/admin/bank-update-requests' },
+    { title: 'Form 16A (TDS)', path: '/admin/form-16a' },
     { title: 'Withdrawal Methods', path: '/admin/withdrawal-methods' },
     { title: 'Recharge History', path: '/admin/wallet-history' },
     { title: 'Admin Earnings', path: '/admin/admin-earnings' },

@@ -19,7 +19,12 @@ const AstrologerDetail = () => {
   const [totalOrderValue, setTotalOrderValue] = useState('');
   const [saving, setSaving] = useState(false);
   const [commForm, setCommForm] = useState({ chatCommission: '', callCommission: '', videoCallCommission: '', reportCommission: '', giftCommission: '', pujaCommission: '' });
+  const [globalComm, setGlobalComm] = useState({});
+  // Which fields are explicit custom overrides vs inheriting the global default.
+  const [isCustomComm, setIsCustomComm] = useState({});
   const [commSaving, setCommSaving] = useState(false);
+
+  const COMM_FIELDS = ['chatCommission', 'callCommission', 'videoCallCommission', 'reportCommission', 'giftCommission', 'pujaCommission'];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -30,11 +35,17 @@ const AstrologerDetail = () => {
         setData(d);
         if (d) {
           setTotalOrderValue(d.totalOrder || 0);
-          setCommForm({
-            chatCommission: d.chatCommission ?? '', callCommission: d.callCommission ?? '',
-            videoCallCommission: d.videoCallCommission ?? '', reportCommission: d.reportCommission ?? '',
-            giftCommission: d.giftCommission ?? '', pujaCommission: d.pujaCommission ?? '',
+          const g = d.globalCommission || {};
+          setGlobalComm(g);
+          // Show the custom override if set, otherwise pre-fill with the global value.
+          const cf = {}, ic = {};
+          COMM_FIELDS.forEach(k => {
+            const hasCustom = d[k] !== null && d[k] !== undefined && d[k] !== '';
+            ic[k] = hasCustom;
+            cf[k] = hasCustom ? d[k] : (g[k] ?? '');
           });
+          setCommForm(cf);
+          setIsCustomComm(ic);
         }
       } catch (e) { console.error(e); }
       setLoading(false);
@@ -495,11 +506,15 @@ const AstrologerDetail = () => {
             <div className="ad-comm-header">
               <div>
                 <h4 className="ad-section-title" style={{ margin: 0 }}>Custom Commission</h4>
-                <p className="ad-comm-note">Empty = Global default. Set custom value to override.</p>
+                <p className="ad-comm-note">Showing the global default. Change a value to set a custom override for this astrologer.</p>
               </div>
               <button onClick={async () => {
                 setCommSaving(true);
-                try { await astrologerApi.updateCommission({ astrologerId: id, ...commForm }); alert('Commission updated!'); }
+                // Send the value only for fields explicitly overridden; others go empty
+                // so the backend keeps them inheriting the global default.
+                const payload = { astrologerId: id };
+                COMM_FIELDS.forEach(k => { payload[k] = isCustomComm[k] ? commForm[k] : ''; });
+                try { await astrologerApi.updateCommission(payload); alert('Commission updated!'); }
                 catch(e) { alert('Failed to update'); }
                 setCommSaving(false);
               }} disabled={commSaving} className="ad-save-btn">
@@ -516,8 +531,21 @@ const AstrologerDetail = () => {
                 { key: 'pujaCommission', label: 'Puja (%)' },
               ].map(f => (
                 <div key={f.key} className="ad-comm-field">
-                  <label>{f.label}</label>
-                  <input type="number" min="0" max="100" value={commForm[f.key]} onChange={e => setCommForm(prev => ({ ...prev, [f.key]: e.target.value }))} placeholder="Default" />
+                  <label>{f.label} {isCustomComm[f.key]
+                    ? <span style={{ color: '#7c3aed', fontSize: '0.7rem', fontWeight: 600 }}>(custom)</span>
+                    : <span style={{ color: '#9ca3af', fontSize: '0.7rem' }}>(global)</span>}
+                  </label>
+                  <input
+                    type="number" min="0" max="100"
+                    value={commForm[f.key]}
+                    onChange={e => {
+                      const v = e.target.value;
+                      setCommForm(prev => ({ ...prev, [f.key]: v }));
+                      // Empty -> revert to global (inherit); any value -> custom override.
+                      setIsCustomComm(prev => ({ ...prev, [f.key]: v !== '' }));
+                    }}
+                    placeholder={globalComm[f.key] ?? '0'}
+                  />
                 </div>
               ))}
             </div>

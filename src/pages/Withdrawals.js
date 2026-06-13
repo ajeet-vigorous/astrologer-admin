@@ -277,7 +277,7 @@ const Withdrawals = () => {
                     <td>{row.tds_pay_amount || 0}</td>
                     <td>{row.pay_amount || 0}</td>
                     <td className="cust-date-cell">{formatDateTime(row.created_at)}</td>
-                    <td>{row.method_name || '-'}</td>
+                    <td>{row.paymentMethod || '-'}</td>
                     <td>{getStatusBadge(row.status || 'Pending')}</td>
                     <td>
                       {row.status === 'Pending' ? (
