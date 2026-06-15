@@ -44,8 +44,10 @@ const Dashboard = () => {
     const params = {};
     if (fd) params.from_date = fd;
     if (td) params.to_date = td;
-    dashboardApi.getBusinessReport(params).then(res => setReport(res.data?.data || null)).catch(() => {});
+    dashboardApi.getBusinessReport(params).then(res => setReport(res.data?.data || null)).catch(() => { });
   };
+  const API_HOST = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+  const imgUrl = (p) => (!p ? '' : p.startsWith('http') ? p : `${API_HOST}/${p.replace(/^\//, '')}`);
 
   useEffect(() => { fetchReport(); }, []);
 
@@ -231,22 +233,6 @@ const Dashboard = () => {
         })}
       </div>
 
-      {/* Charts Row */}
-      <div className="db-charts-row">
-        <div className="db-chart-card">
-          <h3 className="db-chart-title">Monthly Earning Report</h3>
-          <div className="db-chart-wrap">
-            <Line data={earningChartData} options={earningChartOptions} />
-          </div>
-        </div>
-        <div className="db-chart-card">
-          <h3 className="db-chart-title">Monthly Request Report</h3>
-          <div className="db-chart-wrap">
-            <Bar data={requestChartData} options={requestChartOptions} />
-          </div>
-        </div>
-      </div>
-
       {/* Top Astrologers Table */}
       {data.topAstrologer && data.topAstrologer.length > 0 && (
         <div className="db-section">
@@ -270,7 +256,7 @@ const Dashboard = () => {
                     <td>
                       <img
                         className="cust-avatar"
-                        src={a.profileImage ? (a.profileImage.startsWith('http') ? a.profileImage : `/public/storage/images/${a.profileImage}`) : '/default-avatar.png'}
+                        src={imgUrl(a.profileImage)}
                         alt={a.name}
                         onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="%23ddd"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="16" fill="%23999">?</text></svg>'; }}
                       />
@@ -316,7 +302,7 @@ const Dashboard = () => {
                     <td>{i + 1}</td>
                     <td>
                       <img className="cust-avatar"
-                        src={a.profileImage ? (a.profileImage.startsWith('http') ? a.profileImage : `/public/storage/images/${a.profileImage}`) : 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="%23e5e7eb" rx="20"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="16" fill="%23999">?</text></svg>'}
+                       src={imgUrl(a.profileImage)}
                         alt={a.name} onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="%23e5e7eb" rx="20"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="16" fill="%23999">?</text></svg>'; }} />
                     </td>
                     <td className="cust-name-cell">{a.name}</td>
@@ -524,8 +510,8 @@ const Dashboard = () => {
                       <td>{t.userName || '-'}</td>
                       <td>{t.astrologerName || '-'}</td>
                       <td className="db-txn-amount">{'\u20B9'}{formatNumber(parseFloat(t.amount || 0))}</td>
-                      <td style={{color:'#d97706',fontWeight:600}}>{'\u20B9'}{formatNumber(parseFloat(t.adminEarning || 0))}</td>
-                      <td style={{color:'#059669',fontWeight:600}}>{'\u20B9'}{formatNumber(parseFloat(t.astrologerEarning || 0))}</td>
+                      <td style={{ color: '#d97706', fontWeight: 600 }}>{'\u20B9'}{formatNumber(parseFloat(t.adminEarning || 0))}</td>
+                      <td style={{ color: '#059669', fontWeight: 600 }}>{'\u20B9'}{formatNumber(parseFloat(t.astrologerEarning || 0))}</td>
                     </tr>
                   ))}
                   {(!report.recentTransactions || report.recentTransactions.length === 0) && (

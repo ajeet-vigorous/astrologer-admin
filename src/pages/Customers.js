@@ -33,6 +33,17 @@ const Customers = () => {
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
+  const API_HOST = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+  const imgUrl = (p) => {
+    if (!p) return '';
+    if (p.startsWith('http')) return p;
+    // Files are served under /public. Some profiles store "public/storage/..." and
+    // others (customers) store "storage/..." without the prefix — normalize both.
+    let path = p.replace(/^\//, '');
+    if (!path.startsWith('public/')) path = 'public/' + path;
+    return `${API_HOST}/${path}`;
+  };
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -235,19 +246,19 @@ const Customers = () => {
 
       {/* Filters Bar */}
       <div className="cust-filterbar">
-        
+
         <div className="cust-filter-group cust-filter-search-group">
           <label className="cust-filter-label">Search</label>
           <div className="cust-filter-search">
-          <Search size={14} className="cust-search-icon" />
-          <input type="text" placeholder="Search by name or contact..." value={search}
-            onChange={e => setSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setPage(1); fetchData(); } }}
-            className="cust-input cust-search-input" />
-          {search && (
-            <button onClick={() => { setSearch(''); setPage(1); }} className="cust-search-clear">
-              <X size={13} />
-            </button>
-          )}
+            <Search size={14} className="cust-search-icon" />
+            <input type="text" placeholder="Search by name or contact..." value={search}
+              onChange={e => setSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setPage(1); fetchData(); } }}
+              className="cust-input cust-search-input" />
+            {search && (
+              <button onClick={() => { setSearch(''); setPage(1); }} className="cust-search-clear">
+                <X size={13} />
+              </button>
+            )}
           </div>
         </div>
         <div className="cust-filter-date-row">
@@ -314,7 +325,7 @@ const Customers = () => {
                     <td>{(pagination?.start || 1) + i}</td>
                     <td>
                       <img
-                        src={c.profile ? (c.profile.startsWith('http') ? c.profile : `http://localhost:5000/public/${c.profile}`) : 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect width="36" height="36" fill="%23e5e7eb" rx="18"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="14" fill="%23999">?</text></svg>'}
+                        src={imgUrl(c.profile)}
                         alt="" className="cust-avatar"
                         onError={e => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect width="36" height="36" fill="%23e5e7eb" rx="18"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="14" fill="%23999">?</text></svg>'; }}
                       />

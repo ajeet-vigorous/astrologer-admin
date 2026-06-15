@@ -22,6 +22,8 @@ const Astrologers = () => {
   const [verifyId, setVerifyId] = useState(null);
   const [verifyCurrentStatus, setVerifyCurrentStatus] = useState(null);
   const navigate = useNavigate();
+  const API_HOST = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+  const imgUrl = (p) => (!p ? '' : p.startsWith('http') ? p : `${API_HOST}/${p.replace(/^\//, '')}`);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -272,7 +274,7 @@ const Astrologers = () => {
                     <td>{(pagination?.start || 1) + i}</td>
                     <td>
                       <img
-                        src={row.profileImage ? (row.profileImage.startsWith('http') ? row.profileImage : `http://localhost:5000/${row.profileImage}`) : fallbackSvg}
+                        src={imgUrl(row.profileImage)}
                         alt="" className="cust-avatar"
                         onError={e => { e.target.src = fallbackSvg; }}
                       />
