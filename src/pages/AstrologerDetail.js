@@ -231,6 +231,7 @@ const AstrologerDetail = () => {
               <h4 className="ad-section-title">Personal Information</h4>
               <InfoRow label="Gender" value={data.gender} />
               <InfoRow label="Date of Birth" value={formatDate(data.birthDate || data.dateOfBirth)} />
+              <InfoRow label="Billing Address" value={data.billingAddress} />
               <InfoRow label="Category" value={renderList(data.astrologerCategoryId)} />
               <InfoRow label="Primary Skill" value={renderList(data.primarySkill)} />
               <InfoRow label="All Skills" value={renderList(data.allSkill)} />

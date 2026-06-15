@@ -31,7 +31,7 @@ const AstrologerForm = () => {
     bankBranch: '', accountType: 'Savings', upi: '',
     experienceInYears: '', dailyContribution: '', hearAboutAstroguru: '',
     isWorkingOnAnotherPlatform: '', whyOnBoard: '', interviewSuitableTime: '',
-    currentCity: '', mainSourceOfBusiness: '', highestQualification: '',
+    currentCity: '', billingAddress: '', mainSourceOfBusiness: '', highestQualification: '',
     degree: '', college: '', learnAstrology: '',
     minimumEarning: '', maximumEarning: '', loginBio: '',
     NoofforeignCountriesTravel: '', currentlyworkingfulltimejob: '',
@@ -81,7 +81,7 @@ const AstrologerForm = () => {
             experienceInYears: a.experienceInYears || '', dailyContribution: a.dailyContribution || '',
             hearAboutAstroguru: a.hearAboutAstroguru || '', isWorkingOnAnotherPlatform: a.isWorkingOnAnotherPlatform != null ? String(a.isWorkingOnAnotherPlatform) : '',
             whyOnBoard: a.whyOnBoard || '', interviewSuitableTime: a.interviewSuitableTime || '',
-            currentCity: a.currentCity || '', mainSourceOfBusiness: a.mainSourceOfBusiness || '',
+            currentCity: a.currentCity || '', billingAddress: a.billingAddress || '', mainSourceOfBusiness: a.mainSourceOfBusiness || '',
             highestQualification: a.highestQualification || '', degree: a.degree || '', college: a.college || '',
             learnAstrology: a.learnAstrology || '', minimumEarning: a.minimumEarning || '',
             maximumEarning: a.maximumEarning || '', loginBio: a.loginBio || '',
@@ -199,6 +199,10 @@ const AstrologerForm = () => {
             <Field label="WhatsApp" req><input className="af-input" value={form.whatsappNo} onChange={e => h('whatsappNo', e.target.value)} placeholder="WhatsApp number" />{err('whatsappNo')}</Field>
             <Field label="Aadhar No" req><input className="af-input" value={form.aadharNo} onChange={e => h('aadharNo', e.target.value)} />{err('aadharNo')}</Field>
             <Field label="PAN Card" req><input className="af-input" value={form.pancardNo} onChange={e => h('pancardNo', e.target.value)} />{err('pancardNo')}</Field>
+            <div className="af-field af-full">
+              <label className="af-label">Billing Address</label>
+              <textarea className="af-textarea" value={form.billingAddress} onChange={e => h('billingAddress', e.target.value)} placeholder="Full billing address (for payouts & invoices)" />
+            </div>
             <div className="af-field af-full">
               <label className="af-label">Profile Image</label>
               <div className="af-img-upload">
