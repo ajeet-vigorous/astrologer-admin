@@ -33,16 +33,9 @@ const Customers = () => {
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
-  const API_HOST = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
-  const imgUrl = (p) => {
-    if (!p) return '';
-    if (p.startsWith('http')) return p;
-    // Files are served under /public. Some profiles store "public/storage/..." and
-    // others (customers) store "storage/..." without the prefix — normalize both.
-    let path = p.replace(/^\//, '');
-    if (!path.startsWith('public/')) path = 'public/' + path;
-    return `${API_HOST}/${path}`;
-  };
+ const API_HOST = ('https://astrology-i7c9.onrender.com/api').replace(/\/api\/?$/, '');
+  const imgUrl = (p) => (!p ? '' : p.startsWith('http') ? p : `${API_HOST}/${p.replace(/^\//, '')}`);
+
 
   const fetchData = useCallback(async () => {
     setLoading(true);
