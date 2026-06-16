@@ -23,7 +23,7 @@ const AppFeedback = () => {
     setLoading(true);
     try {
       const res = await appFeedbackApi.getAll({ page, search });
-      setData(res.data.data || []);
+      setData(res.data.data?.feedback || []);
       setPagination(res.data.pagination || null);
     } catch (err) {
       console.error('Error fetching app feedback:', err);
@@ -75,13 +75,24 @@ const AppFeedback = () => {
     return <span>{stars}</span>;
   };
 
+  // Build a usable image URL from the stored profile path (handles "storage/..." and
+  // "public/storage/..." formats; files are served under /public).
+  const API_HOST = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+  const imgUrl = (p) => {
+    if (!p) return 'https://via.placeholder.com/50';
+    if (p.startsWith('http')) return p;
+    let path = p.replace(/^\//, '');
+    if (!path.startsWith('public/')) path = 'public/' + path;
+    return `${API_HOST}/${path}`;
+  };
+
   const feedbackColumns = [
     { header: '#', render: (row, i) => ((page - 1) * 10) + i + 1 },
     {
       header: 'Profile',
       render: (row) => (
         <img
-          src={row.userImage || row.user?.image || row.user?.profileImage || 'https://via.placeholder.com/50'}
+          src={imgUrl(row.profile)}
           alt="User"
           onError={(e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/50'; }}
           style={{ width: 45, height: 45, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e5e7eb' }}
@@ -92,29 +103,28 @@ const AppFeedback = () => {
       header: 'User',
       render: (row) => (
         <div>
-          <div style={{ fontWeight: 600 }}>{row.userName || row.user?.name || '-'}</div>
-          <div style={{ fontSize: 12, color: '#6b7280' }}>{row.userContactNumber || row.user?.contactNumber || row.user?.phone || ''}</div>
+          <div style={{ fontWeight: 600 }}>{row.name || '-'}</div>
+          <div style={{ fontSize: 12, color: '#6b7280' }}>{row.contactNo || ''}</div>
         </div>
       )
     },
     {
       header: 'App',
       render: (row) => {
-        const appType = row.appType || row.app || row.type || '';
-        if (appType === 'partner' || appType === 'astrologer' || appType === 'Partner App') {
-          return <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>Partner App</span>;
-        }
-        return <span style={{ background: '#dcfce7', color: '#15803d', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>Customer App</span>;
+        // appId: 1 = customer app, 2 = partner/astrologer app
+        const isPartner = String(row.appId) === '2';
+        return isPartner
+          ? <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>Partner App</span>
+          : <span style={{ background: '#dcfce7', color: '#15803d', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>Customer App</span>;
       }
     },
-    { header: 'Rating', render: (row) => renderStars(row.rating) },
     {
       header: 'Feedback',
-      render: (row) => row.feedback ? (row.feedback.length > 60 ? row.feedback.substring(0, 60) + '...' : row.feedback) : '-'
+      render: (row) => row.review ? row.review : '-'
     },
     {
-      header: 'Feedback Date',
-      render: (row) => formatDate(row.createdAt)
+      header: 'Date',
+      render: (row) => formatDate(row.created_at)
     }
   ];
 

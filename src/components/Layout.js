@@ -19,7 +19,7 @@ const menuItems = [
     { title: 'Manage Astrologer', path: '/admin/astrologers' },
     { title: 'Block Astrologer', path: '/admin/blocked-astrologers' },
     { title: 'Pending Requests', path: '/admin/pending-astrologers' },
-    { title: 'Reviews', path: '/admin/app-feedback' },
+    { title: 'App Feedback', path: '/admin/app-feedback' },
     { title: 'Gifts', path: '/admin/gifts' },
     { title: 'Skills', path: '/admin/skills' },
     { title: 'Categories', path: '/admin/astrologer-categories' },
@@ -69,7 +69,7 @@ const menuItems = [
     { title: 'Course Orders', path: '/admin/course-orders' },
   ]},
   { title: 'Page Management', path: '/admin/pages', icon: FileStack },
-  { title: 'App Design', path: '/admin/app-design', icon: Palette },
+  // { title: 'App Design', path: '/admin/app-design', icon: Palette },
   { title: 'Training Videos', path: '/admin/training-videos', icon: MonitorPlay },
   { title: 'Web Home FAQ', path: '/admin/web-home-faq', icon: CircleHelp },
   { title: 'Master Settings', icon: Settings, children: [

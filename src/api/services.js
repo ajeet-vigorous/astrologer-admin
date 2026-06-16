@@ -293,6 +293,8 @@ export const systemFlagApi = {
 
 export const withdrawalApi = {
   getAll: (params) => API.get('/withdrawals', { params }),
+  astrologerWithdrawInfo: (data) => API.post('/withdrawals/astrologer-withdraw-info', data),
+  astrologerWithdraw: (data) => API.post('/withdrawals/astrologer-withdraw', data),
   release: (data) => API.post('/withdrawals/release', data),
   cancel: (data) => API.post('/withdrawals/cancel', data),
   tdsCsv: (params) => API.get('/withdrawals/tds-csv', { params, responseType: 'blob' }),

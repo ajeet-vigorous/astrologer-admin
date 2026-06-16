@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { astrologerApi } from '../api/services';
+import { astrologerApi, withdrawalApi } from '../api/services';
 import Loader from '../components/Loader';
-import { Eye, Pencil, Trash2, Plus, FileText, FileSpreadsheet, X, ChevronLeft, ChevronRight, AlertTriangle, Sparkles, Search, Calendar } from 'lucide-react';
+import { Eye, Pencil, Trash2, Plus, FileText, FileSpreadsheet, X, ChevronLeft, ChevronRight, AlertTriangle, Sparkles, Search, Calendar, Banknote } from 'lucide-react';
 import Swal from 'sweetalert2';
 import DatePicker from 'react-datepicker';
 import moment from 'moment';
@@ -67,6 +67,35 @@ const Astrologers = () => {
       await astrologerApi.updateSectionStatus({ astro_id: astrologerId, section, status: newStatus });
       fetchData();
     } catch (e) { console.error(e); }
+  };
+
+  // ── Admin withdraw (salary payout) for an astrologer ──
+  const [wdRow, setWdRow] = useState(null);          // astrologer being paid
+  const [wdInfo, setWdInfo] = useState(null);        // { walletAmount, tdsPercent, pgChargePercent, astrologer }
+  const [wdAmount, setWdAmount] = useState('');
+  const [wdSubmitting, setWdSubmitting] = useState(false);
+
+  const openWithdraw = async (row) => {
+    setWdRow(row); setWdInfo(null); setWdAmount('');
+    try {
+      const res = await withdrawalApi.astrologerWithdrawInfo({ astrologerId: row.id });
+      setWdInfo(res.data);
+    } catch (e) { setWdInfo({ walletAmount: 0, tdsPercent: 0, pgChargePercent: 2.5 }); }
+  };
+
+  const submitWithdraw = async () => {
+    const amt = parseFloat(wdAmount);
+    if (!amt || amt < 10) { Swal.fire({ icon: 'warning', title: 'Enter a valid amount (min ₹10)', confirmButtonColor: '#7c3aed' }); return; }
+    if (wdInfo && amt > wdInfo.walletAmount) { Swal.fire({ icon: 'warning', title: 'Amount exceeds wallet balance', confirmButtonColor: '#7c3aed' }); return; }
+    setWdSubmitting(true);
+    try {
+      await withdrawalApi.astrologerWithdraw({ astrologerId: wdRow.id, withdrawAmount: amt });
+      setWdRow(null);
+      Swal.fire({ icon: 'success', title: 'Withdrawal created', text: 'It is now Pending in Withdrawals — release it when paid.', confirmButtonColor: '#7c3aed', timer: 2200, showConfirmButton: false });
+    } catch (e) {
+      Swal.fire({ icon: 'error', title: 'Failed', text: e.response?.data?.message || 'Could not create withdrawal', confirmButtonColor: '#7c3aed' });
+    }
+    setWdSubmitting(false);
   };
 
   const handleDelete = async (id) => {
@@ -306,6 +335,9 @@ const Astrologers = () => {
                         <button onClick={() => navigate(`/admin/astrologers/edit/${row.id}`)} className="cust-action-btn cust-action-edit" title="Edit">
                           <Pencil size={15} />
                         </button>
+                        <button onClick={() => openWithdraw(row)} className="cust-action-btn" title="Withdraw (pay salary)" style={{ color: '#0ea5e9' }}>
+                          <Banknote size={15} />
+                        </button>
                         <button onClick={() => handleDelete(row.id)} className="cust-action-btn cust-action-delete" title="Delete">
                           <Trash2 size={15} />
                         </button>
@@ -338,6 +370,55 @@ const Astrologers = () => {
           </div>
         </div>
       )}
+
+      {/* Admin withdraw (salary payout) modal */}
+      {wdRow && (() => {
+        const amt = parseFloat(wdAmount) || 0;
+        const tdsP = wdInfo?.tdsPercent ?? 0;
+        const pgP = wdInfo?.pgChargePercent ?? 2.5;
+        const tds = amt * tdsP / 100, pg = amt * pgP / 100, payable = amt - tds - pg;
+        const brow = { display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', margin: '6px 0' };
+        return (
+          <div className="cust-overlay" onClick={() => setWdRow(null)}>
+            <div className="cust-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
+              <div className="cust-modal-header">
+                <h3 style={{ margin: 0 }}>Withdraw — {wdRow.name}</h3>
+                <button className="cust-modal-close" onClick={() => setWdRow(null)}><X size={20} /></button>
+              </div>
+              <div className="cust-modal-body" style={{ padding: 18 }}>
+                {!wdInfo ? <Loader text="Loading..." /> : (
+                  <>
+                    <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 10, padding: '10px 14px', marginBottom: 14, display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#0369a1', fontWeight: 600 }}>Wallet Balance (unpaid earnings)</span>
+                      <strong style={{ color: '#0369a1' }}>₹{(wdInfo.walletAmount || 0).toFixed(2)}</strong>
+                    </div>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Withdraw Amount (salary to pay)</label>
+                    <input type="number" value={wdAmount} onChange={e => setWdAmount(e.target.value)} placeholder="Enter amount"
+                      style={{ width: '100%', padding: 10, margin: '6px 0 14px', border: '1px solid #e5e7eb', borderRadius: 8 }} />
+
+                    {amt > 0 && (
+                      <div style={{ background: '#faf7ff', border: '1px solid #e0d4f5', borderRadius: 10, padding: 14 }}>
+                        <div style={{ fontWeight: 700, color: '#1a0533', marginBottom: 6 }}>Breakdown</div>
+                        <div style={brow}><span>Withdraw Amount</span><span>₹{amt.toFixed(2)}</span></div>
+                        <div style={{ ...brow, color: '#dc2626' }}><span>TDS ({tdsP}%)</span><span>- ₹{tds.toFixed(2)}</span></div>
+                        <div style={{ ...brow, color: '#dc2626' }}><span>PG Charge ({pgP}%)</span><span>- ₹{pg.toFixed(2)}</span></div>
+                        <hr style={{ border: 'none', borderTop: '1px dashed #c4b5fd', margin: '8px 0' }} />
+                        <div style={{ ...brow, fontWeight: 700, color: '#16a34a' }}><span>Astrologer Will Receive</span><span>₹{payable.toFixed(2)}</span></div>
+                        <p style={{ fontSize: '0.74rem', color: '#6b7280', margin: '8px 0 0' }}>₹{amt.toFixed(2)} wallet se katega; charges payout se minus honge. Astrologer ke withdrawal list me bhi dikhega.</p>
+                      </div>
+                    )}
+
+                    <button onClick={submitWithdraw} disabled={wdSubmitting}
+                      className="cust-btn cust-btn-primary" style={{ width: '100%', marginTop: 16, justifyContent: 'center' }}>
+                      {wdSubmitting ? 'Processing...' : 'Create Withdrawal (Pending)'}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
