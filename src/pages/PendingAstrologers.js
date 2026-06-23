@@ -71,6 +71,18 @@ const PendingAstrologers = () => {
 
   const fallbackSvg = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect width="36" height="36" fill="%23e5e7eb" rx="18"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="14" fill="%23999">?</text></svg>';
 
+  const IMAGE_HOST = process.env.REACT_APP_IMAGE_URL;
+  const imgSrc = (p) => {
+    if (!p) return '';
+    if (p.startsWith('http') || p.startsWith('data:')) return p;
+    let clean = p.replace(/^\/+/, '');
+    // bare filename (no folder) lives under storage/images
+    if (!clean.includes('/')) clean = `storage/images/${clean}`;
+    // backend serves uploads from /public (some paths omit it)
+    if (!clean.startsWith('public/')) clean = `public/${clean}`;
+    return `${IMAGE_HOST}/${clean}`;
+  };
+
   const ToggleSwitch = ({ checked, onChange }) => (
     <div className="cust-toggle-wrap">
       <div onClick={onChange} className={`cust-toggle ${checked ? 'on' : ''}`}>
@@ -206,7 +218,7 @@ const PendingAstrologers = () => {
                     <td>{(pagination?.start || 1) + i}</td>
                     <td>
                       {row.profileImage ? (
-                        <img src={row.profileImage} alt="" className="cust-avatar" onError={e => { e.target.src = fallbackSvg; }} />
+                        <img src={imgSrc(row.profileImage)} alt="" className="cust-avatar" onError={e => { e.target.src = fallbackSvg; }} />
                       ) : (
                         <img src={fallbackSvg} alt="" className="cust-avatar" />
                       )}

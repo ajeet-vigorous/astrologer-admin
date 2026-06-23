@@ -87,7 +87,8 @@ const AstroMallCategories = () => {
       setShowAddModal(false);
       fetchData();
     } catch (err) {
-      console.error('Error adding category:', err);
+      console.error('Error adding category:', err.response?.status, err.response?.data || err.message);
+      Swal.fire({ title: 'Error!', text: err.response?.data?.message || 'Failed to add category', icon: 'error', confirmButtonColor: '#7c3aed' });
     }
   };
 
@@ -122,7 +123,8 @@ const AstroMallCategories = () => {
       setShowEditModal(false);
       fetchData();
     } catch (err) {
-      console.error('Error editing category:', err);
+      console.error('Error editing category:', err.response?.status, err.response?.data || err.message);
+      Swal.fire({ title: 'Error!', text: err.response?.data?.message || 'Failed to update category', icon: 'error', confirmButtonColor: '#7c3aed' });
     }
   };
 
@@ -191,6 +193,17 @@ const AstroMallCategories = () => {
       </div>
     );
   };
+ const IMAGE_HOST = process.env.REACT_APP_IMAGE_URL;
+  const imgUrl = (p) => {
+    if (!p) return '';
+    if (p.startsWith('http') || p.startsWith('data:')) return p;
+    let clean = p.replace(/^\/+/, '');
+    // bare filename (no folder) lives under storage/images
+    if (!clean.includes('/')) clean = `storage/images/${clean}`;
+    // backend serves uploads from /public (some paths omit it)
+    if (!clean.startsWith('public/')) clean = `public/${clean}`;
+    return `${IMAGE_HOST}/${clean}`;
+  };
 
   return (
     <div>
@@ -253,9 +266,10 @@ const AstroMallCategories = () => {
                 <div key={item.id} style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
                   {/* Image area with gradient overlay */}
                   <div style={{ position: 'relative', width: '100%', height: 160, overflow: 'hidden', background: '#e5e7eb' }}>
-                    {imgSrc ? (
+                  
+                    {item?.categoryImage ? (
                       <img
-                        src={imgSrc}
+                        src={imgUrl(item?.categoryImage)}
                         alt={item.name}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => { e.target.style.display = 'none'; }}
@@ -353,7 +367,7 @@ const AstroMallCategories = () => {
                 <div className="cust-form-group">
                   <label>Current Image</label>
                   <img
-                    src={editCurrentImage.startsWith('http') ? editCurrentImage : '/' + editCurrentImage}
+                    src={imgUrl(editCurrentImage)}
                     alt="Current"
                     className="cust-img-preview"
                     onError={(e) => { e.target.style.display = 'none'; }}

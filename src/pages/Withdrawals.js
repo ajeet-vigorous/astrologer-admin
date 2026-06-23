@@ -169,6 +169,18 @@ const Withdrawals = () => {
     );
   };
 
+        const IMAGE_HOST = process.env.REACT_APP_IMAGE_URL;
+  const getImageSrc = (p) => {
+    if (!p) return '';
+    if (p.startsWith('http') || p.startsWith('data:')) return p;
+    let clean = p.replace(/^\/+/, '');
+    // bare filename (no folder) lives under storage/images
+    if (!clean.includes('/')) clean = `storage/images/${clean}`;
+    // backend serves uploads from /public (customer paths omit it)
+    if (!clean.startsWith('public/')) clean = `public/${clean}`;
+    return `${IMAGE_HOST}/${clean}`;
+  };
+
   return (
     <div>
       {/* Page Top Bar */}
@@ -260,7 +272,7 @@ const Withdrawals = () => {
                     <td>
                       <div className="cust-actions">
                         {row.profileImage ? (
-                          <img src={row.profileImage} alt="" className="cust-avatar" />
+                          <img src={getImageSrc(row.profileImage)} alt="" className="cust-avatar" />
                         ) : (
                           <img
                             src={`data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect width="36" height="36" fill="%23e5e7eb" rx="18"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="14" fill="%23999">${encodeURIComponent((row.name || '?')[0])}</text></svg>`}

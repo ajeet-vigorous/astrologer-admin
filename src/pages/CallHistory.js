@@ -306,7 +306,7 @@ const CallHistory = () => {
                 <tr>
                   <th>#</th>
                   <th>Customer Name</th>
-                  <th>Contact</th>
+                  {/* <th>Contact</th> */}
                   <th>Astrologer</th>
                   <th>Call Rate</th>
                   <th>Duration (min)</th>
@@ -328,13 +328,13 @@ const CallHistory = () => {
                   const callType = row.callType || row.call_type || 'Audio';
                   const rawStatus = row.callStatus || row.status;
                   const callId = row.id || row._id;
-                  const customerName = row.customerName || row.customer?.name;
+                  const customerName = row.userName || row.userName;
                   const astrologerName = row.astrologerName || row.astrologer?.name;
                   return (
                     <tr key={row._id || row.id || i}>
                       <td>{(pagination?.start || ((page - 1) * 10 + 1)) + i}</td>
                       <td className="cust-name-cell">{customerName || '-'}</td>
-                      <td>{row.customerPhone || row.customer?.phone || row.customer?.contactNo || '-'}</td>
+                      {/* <td>{row.customerPhone || row.customer?.phone || row.customer?.contactNo || '-'}</td> */}
                       <td>{astrologerName || '-'}</td>
                       <td>{row.callRate != null ? formatNumber(row.callRate) : '-'}</td>
                       <td>{row.totalMinutes || row.totalMin || row.duration || '0'}</td>

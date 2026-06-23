@@ -83,6 +83,8 @@ const Gifts = () => {
       </div>
     );
   };
+const IMAGE_HOST = process.env.REACT_APP_IMAGE_URL;
+  const imgUrl = (p) => (!p ? '' : p.startsWith('http') ? p : `${IMAGE_HOST}/${p.replace(/^\//, '')}`);
 
   return (
     <div>
@@ -114,7 +116,7 @@ const Gifts = () => {
                     <td>{(pagination?.start || 1) + i}</td>
                     <td>
                       {row.image ? (
-                        <img src={row.image} alt={row.name} className="cust-avatar" style={{ borderRadius: 6 }} />
+                        <img src={imgUrl(row.image)} alt={row.name} className="cust-avatar" style={{ borderRadius: 6 }} />
                       ) : <span style={{ color: '#94a3b8', fontSize: 12 }}>No image</span>}
                     </td>
                     <td className="cust-name-cell">{row.name}</td>

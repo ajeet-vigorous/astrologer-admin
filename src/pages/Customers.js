@@ -33,8 +33,17 @@ const Customers = () => {
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
- const API_HOST = ('https://astrology-i7c9.onrender.com/api').replace(/\/api\/?$/, '');
-  const imgUrl = (p) => (!p ? '' : p.startsWith('http') ? p : `${API_HOST}/${p.replace(/^\//, '')}`);
+  const IMAGE_HOST = process.env.REACT_APP_IMAGE_URL;
+  const imgUrl = (p) => {
+    if (!p) return '';
+    if (p.startsWith('http') || p.startsWith('data:')) return p;
+    let clean = p.replace(/^\/+/, '');
+    // bare filename (no folder) lives under storage/images
+    if (!clean.includes('/')) clean = `storage/images/${clean}`;
+    // backend serves uploads from /public (customer paths omit it)
+    if (!clean.startsWith('public/')) clean = `public/${clean}`;
+    return `${IMAGE_HOST}/${clean}`;
+  };
 
 
   const fetchData = useCallback(async () => {
@@ -45,6 +54,8 @@ const Customers = () => {
       if (dateApplied && fromDate) params.from_date = moment(fromDate).format('YYYY-MM-DD');
       if (dateApplied && toDate) params.to_date = moment(toDate).format('YYYY-MM-DD');
       const res = await customerApi.getAll(params);
+      // TEMP DEBUG: dekho list me image field aa raha hai ya nahi
+      console.log('CUSTOMER LIST RAW:', (res.data.customers || []).map(c => ({ id: c.id, name: c.name, profile: c.profile, profileImage: c.profileImage })));
       setCustomers(res.data.customers || []);
       setPagination({
         totalPages: res.data.totalPages, totalRecords: res.data.totalRecords,
@@ -111,7 +122,7 @@ const Customers = () => {
         pincode: c.pincode || '', countryCode: c.countryCode || '',
         country: c.country || '', password: '', profile: ''
       });
-      setImagePreview(c.profile ? (c.profile.startsWith('http') ? c.profile : `/public/${c.profile}`) : null);
+      setImagePreview(imgUrl(c.profileImage || c.profile) || null);
       setShowAddModal(true);
     } catch (e) {
       setEditData(customer);
@@ -317,8 +328,9 @@ const Customers = () => {
                   <tr key={c.id}>
                     <td>{(pagination?.start || 1) + i}</td>
                     <td>
+                      {console.log(imgUrl(c.profileImage || c.profile))}
                       <img
-                        src={imgUrl(c.profile)}
+                        src={imgUrl(c.profileImage || c.profile)}
                         alt="" className="cust-avatar"
                         onError={e => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect width="36" height="36" fill="%23e5e7eb" rx="18"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="14" fill="%23999">?</text></svg>'; }}
                       />

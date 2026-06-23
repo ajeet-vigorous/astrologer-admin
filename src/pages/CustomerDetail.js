@@ -42,8 +42,6 @@ const CustomerDetail = () => {
   const followers = data.follower || [];
   const notifications = data.notification || [];
 
-  const profileImg = data.profile ? (data.profile.startsWith('http') ? data.profile : `/public/${data.profile}`) : null;
-
   const formatDate = (d) => {
     if (!d) return '-';
     const dt = new Date(d);
@@ -92,8 +90,17 @@ const CustomerDetail = () => {
     { key: 'gift', label: 'Gifts', icon: Gift, count: gifts.length },
   ];
 
-  const imgSrc = (img) => img ? (img.startsWith('http') ? img : `/public/storage/images/${img}`) : fallbackSvg;
-
+  const IMAGE_HOST = process.env.REACT_APP_IMAGE_URL;
+  const imgSrc = (p) => {
+    if (!p) return '';
+    if (p.startsWith('http') || p.startsWith('data:')) return p;
+    let clean = p.replace(/^\/+/, '');
+    // bare filename (no folder) lives under storage/images
+    if (!clean.includes('/')) clean = `storage/images/${clean}`;
+    // backend serves uploads from /public (customer paths omit it)
+    if (!clean.startsWith('public/')) clean = `public/${clean}`;
+    return `${IMAGE_HOST}/${clean}`;
+  };
   const stats = [
     { label: 'Wallet', value: `${curr}${formatNumber(data.walletBalance || 0)}`, color: '#059669', bg: '#ecfdf5' },
     { label: 'Calls', value: data.callRequest?.totalCount || 0, color: '#7c3aed', bg: '#f5f3ff' },
@@ -109,8 +116,8 @@ const CustomerDetail = () => {
         <div className="cd-hero">
           <div className="cd-hero-left">
             <div className="cd-hero-avatar-wrap">
-              {profileImg ? (
-                <img src={profileImg} alt={data.name} className="cd-hero-avatar"
+              {data.profile ? (
+                <img src={imgSrc(data.profile)} alt={data.name} className="cd-hero-avatar"
                   onError={e => { e.target.src = fallbackSvg; }} />
               ) : (
                 <div className="cd-hero-avatar cd-hero-initial">
@@ -320,7 +327,7 @@ const CustomerDetail = () => {
               {orders.map((o, i) => (
                 <div key={i} className="cd-item-card">
                   {o.productImage && (
-                    <img src={o.productImage.startsWith('http') ? o.productImage : `/public/storage/images/${o.productImage}`}
+                    <img src={imgSrc(o.productImage)}
                       alt="" className="cd-item-img"
                       onError={e => { e.target.style.display = 'none'; }} />
                   )}
@@ -347,7 +354,7 @@ const CustomerDetail = () => {
               {pujaOrders.map((p, i) => (
                 <div key={i} className="cd-item-card">
                   {p.pujaImage && (
-                    <img src={p.pujaImage.startsWith('http') ? p.pujaImage : `/public/storage/images/${p.pujaImage}`}
+                    <img src={imgSrc(p.pujaImage)}
                       alt="" className="cd-item-img"
                       onError={e => { e.target.style.display = 'none'; }} />
                   )}

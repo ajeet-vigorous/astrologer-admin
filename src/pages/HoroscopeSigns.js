@@ -145,7 +145,17 @@ const HoroscopeSigns = () => {
       </div>
     );
   };
-
+    const IMAGE_HOST = process.env.REACT_APP_IMAGE_URL;
+  const getImageSrc = (p) => {
+    if (!p) return '';
+    if (p.startsWith('http') || p.startsWith('data:')) return p;
+    let clean = p.replace(/^\/+/, '');
+    // bare filename (no folder) lives under storage/images
+    if (!clean.includes('/')) clean = `storage/images/${clean}`;
+    // backend serves uploads from /public (customer paths omit it)
+    if (!clean.startsWith('public/')) clean = `public/${clean}`;
+    return `${IMAGE_HOST}/${clean}`;
+  };
   return (
     <div>
       <div className="cust-topbar">
@@ -185,7 +195,7 @@ const HoroscopeSigns = () => {
                     <td className="cust-name-cell">{row.name}</td>
                     <td>
                       {row.image ? (
-                        <img src={row.image} alt={row.name} className="cust-avatar" />
+                        <img src={getImageSrc(row.image)} alt={row.name} className="cust-avatar" />
                       ) : (
                         <span className="cust-no-data">No Image</span>
                       )}
@@ -236,7 +246,7 @@ const HoroscopeSigns = () => {
               {editData && editData.image && !imageFile && (
                 <div className="cust-form-group">
                   <label>Current Image</label>
-                  <img src={editData.image} alt="Current" className="cust-img-preview" />
+                  <img src={getImageSrc(editData.image)} alt="Current" className="cust-img-preview" />
                 </div>
               )}
               <button type="submit" className="cust-btn cust-btn-primary cust-btn-full">

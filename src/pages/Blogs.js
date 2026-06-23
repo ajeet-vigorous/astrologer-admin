@@ -6,8 +6,6 @@ import Loader from '../components/Loader';
 import '../styles/Customers.css';
 import '../styles/Blogs.css';
 
-import getImgSrc from '../utils/getImageUrl';
-
 const Blogs = () => {
   const [data, setData] = useState([]);
   const [page, setPage] = useState(1);
@@ -164,6 +162,9 @@ const Blogs = () => {
     return pages;
   };
 
+   const IMAGE_HOST = process.env.REACT_APP_IMAGE_URL;
+  const imgUrl = (p) => (!p ? '' : p.startsWith('http') ? p : `${IMAGE_HOST}/${p.replace(/^\//, '')}`);
+
   const renderForm = (f, setF, onSubmit, btnText, isEdit) => (
     <form onSubmit={onSubmit}>
       <div className="cust-form-group">
@@ -188,7 +189,7 @@ const Blogs = () => {
         <div className="cust-form-group">
           <label>Blog Image</label>
           {isEdit && f.blogImage && !f.blogImage.startsWith('data:') && (
-            <img src={getImgSrc(f.blogImage)} alt="" className="cust-img-preview" onError={(e) => { e.target.style.display = 'none'; }} />
+            <img src={imgUrl(f.blogImage)} alt="" className="cust-img-preview" onError={(e) => { e.target.style.display = 'none'; }} />
           )}
           {f.blogImage && f.blogImage.startsWith('data:') && (
             <img src={f.blogImage} alt="" className="cust-img-preview" />
@@ -198,7 +199,7 @@ const Blogs = () => {
         <div className="cust-form-group">
           <label>Preview Image</label>
           {isEdit && f.previewImage && !f.previewImage.startsWith('data:') && (
-            <img src={getImgSrc(f.previewImage)} alt="" className="cust-img-preview" onError={(e) => { e.target.style.display = 'none'; }} />
+            <img src={imgUrl(f.previewImage)} alt="" className="cust-img-preview" onError={(e) => { e.target.style.display = 'none'; }} />
           )}
           {f.previewImage && f.previewImage.startsWith('data:') && (
             <img src={f.previewImage} alt="" className="cust-img-preview" />
@@ -255,10 +256,10 @@ const Blogs = () => {
           <div className="mall-card-grid">
             {data.map(blog => (
               <div key={blog.id} className="blog-card">
-                <div className="blog-card-img-wrap" onClick={() => blog.blogImage && setViewerImg(getImgSrc(blog.blogImage))}>
+                <div className="blog-card-img-wrap" onClick={() => blog.blogImage && setViewerImg(imgUrl(blog.blogImage))}>
                   {blog.blogImage ? (
                     <img
-                      src={getImgSrc(blog.blogImage)}
+                      src={imgUrl(blog.blogImage)}
                       alt=""
                       className="blog-card-img"
                       onError={(e) => { e.target.src = '/build/assets/images/person.png'; }}

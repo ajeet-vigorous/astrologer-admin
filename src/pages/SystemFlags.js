@@ -69,6 +69,17 @@ const SystemFlags = () => {
     setFlagGroups(updated);
   };
 
+        const IMAGE_HOST = process.env.REACT_APP_IMAGE_URL;
+  const getImageSrc = (p) => {
+    if (!p) return '';
+    if (p.startsWith('http') || p.startsWith('data:')) return p;
+    let clean = p.replace(/^\/+/, '');
+    // bare filename (no folder) lives under storage/images
+    if (!clean.includes('/')) clean = `storage/images/${clean}`;
+    // backend serves uploads from /public (customer paths omit it)
+    if (!clean.startsWith('public/')) clean = `public/${clean}`;
+    return `${IMAGE_HOST}/${clean}`;
+  };
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -173,7 +184,7 @@ const SystemFlags = () => {
       return (
         <div key={`${name}-${flagIndex}`} className="sf-file-card">
           <div className="sf-file-preview">
-            {imgSrc ? <img src={imgSrc} alt={displayName} /> : <div className="sf-file-empty">No Image</div>}
+            {imgSrc ? <img src={getImageSrc(value)} alt={displayName} /> : <div className="sf-file-empty">No Image</div>}
           </div>
           <div className="sf-file-info">
             <label className="sf-file-name">{displayName}</label>

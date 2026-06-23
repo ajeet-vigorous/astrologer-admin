@@ -6,8 +6,6 @@ import { HandHeart, Eye, Pencil, Trash2, Plus, ChevronLeft, ChevronRight } from 
 import Swal from 'sweetalert2';
 import '../styles/Customers.css';
 
-import getImgSrc from '../utils/getImageUrl';
-
 const PujaList = () => {
   const [data, setData] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -56,11 +54,18 @@ const PujaList = () => {
     }
   };
 
+
+  const IMAGE_HOST = process.env.REACT_APP_IMAGE_URL;
   const getImgSrc = (images) => {
-    if (!images || !Array.isArray(images) || images.length === 0) return '/build/assets/images/default.jpg';
-    const img = images[0];
-    if (img.startsWith('http')) return img;
-    if (img.startsWith('public/')) return '/' + img; return '/public/' + img;
+    const p = images[0];
+    if (!p) return '';
+    if (p.startsWith('http') || p.startsWith('data:')) return p;
+    let clean = p.replace(/^\/+/, '');
+    // bare filename (no folder) lives under storage/images
+    if (!clean.includes('/')) clean = `storage/images/${clean}`;
+    // backend serves uploads from /public (customer paths omit it)
+    if (!clean.startsWith('public/')) clean = `public/${clean}`;
+    return `${IMAGE_HOST}/${clean}`;
   };
 
   const isDatePassed = (datetime) => {

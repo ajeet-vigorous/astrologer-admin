@@ -196,6 +196,18 @@ const Banners = () => {
     </form>
   );
 
+      const IMAGE_HOST = process.env.REACT_APP_IMAGE_URL;
+  const getImageSrc = (p) => {
+    if (!p) return '';
+    if (p.startsWith('http') || p.startsWith('data:')) return p;
+    let clean = p.replace(/^\/+/, '');
+    // bare filename (no folder) lives under storage/images
+    if (!clean.includes('/')) clean = `storage/images/${clean}`;
+    // backend serves uploads from /public (customer paths omit it)
+    if (!clean.startsWith('public/')) clean = `public/${clean}`;
+    return `${IMAGE_HOST}/${clean}`;
+  };
+
   return (
     <div>
       <div className="cust-topbar">
@@ -227,7 +239,7 @@ const Banners = () => {
                   <div className="video-card-thumb" onClick={() => setViewerImg(getImgSrc(item.bannerImage))}>
                     {item.bannerImage ? (
                       <img
-                        src={getImgSrc(item.bannerImage)}
+                        src={getImageSrc(item.bannerImage)}
                         alt={item.bannerType || 'Banner'}
                         onError={(e) => { e.target.src = '/build/assets/images/person.png'; }}
                       />

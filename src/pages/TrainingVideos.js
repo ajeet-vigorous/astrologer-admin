@@ -75,11 +75,19 @@ const TrainingVideos = () => {
     }
   };
 
-  const getImageSrc = (img) => {
-    if (!img) return '/build/assets/images/default.jpg';
-    return img.startsWith('http') ? img : '/' + img;
-  };
 
+
+    const IMAGE_HOST = process.env.REACT_APP_IMAGE_URL;
+  const getImageSrc = (p) => {
+    if (!p) return '';
+    if (p.startsWith('http') || p.startsWith('data:')) return p;
+    let clean = p.replace(/^\/+/, '');
+    // bare filename (no folder) lives under storage/images
+    if (!clean.includes('/')) clean = `storage/images/${clean}`;
+    // backend serves uploads from /public (customer paths omit it)
+    if (!clean.startsWith('public/')) clean = `public/${clean}`;
+    return `${IMAGE_HOST}/${clean}`;
+  };
   const renderPagination = () => {
     if (!pagination || pagination.totalPages <= 1) return null;
     const { totalPages } = pagination;

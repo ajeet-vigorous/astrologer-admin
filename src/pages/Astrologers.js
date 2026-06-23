@@ -22,8 +22,8 @@ const Astrologers = () => {
   const [verifyId, setVerifyId] = useState(null);
   const [verifyCurrentStatus, setVerifyCurrentStatus] = useState(null);
   const navigate = useNavigate();
-  const API_HOST = ('https://astrology-i7c9.onrender.com/api').replace(/\/api\/?$/, '');
-  const imgUrl = (p) => (!p ? '' : p.startsWith('http') ? p : `${API_HOST}/${p.replace(/^\//, '')}`);
+  const IMAGE_HOST = process.env.REACT_APP_IMAGE_URL;
+  const imgUrl = (p) => (!p ? '' : p.startsWith('http') ? p : `${IMAGE_HOST}/${p.replace(/^\//, '')}`);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -302,6 +302,7 @@ const Astrologers = () => {
                   <tr key={row.id}>
                     <td>{(pagination?.start || 1) + i}</td>
                     <td>
+                  
                       <img
                         src={imgUrl(row.profileImage)}
                         alt="" className="cust-avatar"

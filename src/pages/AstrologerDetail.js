@@ -68,9 +68,7 @@ const AstrologerDetail = () => {
   const bankDetails = data.bankDetails || {};
   const review = data.review || [];
 
-  const profileImg = data.profileImage
-    ? (data.profileImage.startsWith('http') ? data.profileImage : `/public/storage/images/${data.profileImage}`)
-    : null;
+
 
   const formatDate = (d) => {
     if (!d) return '-';
@@ -112,7 +110,17 @@ const AstrologerDetail = () => {
     setSaving(false);
   };
 
-  const imgSrc = (img) => img ? (img.startsWith('http') ? img : `/public/storage/images/${img}`) : fallbackSvg;
+  const IMAGE_HOST = process.env.REACT_APP_IMAGE_URL;
+  const imgSrc = (p) => {
+    if (!p) return '';
+    if (p.startsWith('http') || p.startsWith('data:')) return p;
+    let clean = p.replace(/^\/+/, '');
+    // bare filename (no folder) lives under storage/images
+    if (!clean.includes('/')) clean = `storage/images/${clean}`;
+    // backend serves uploads from /public (customer paths omit it)
+    if (!clean.startsWith('public/')) clean = `public/${clean}`;
+    return `${IMAGE_HOST}/${clean}`;
+  };
 
   const stats = [
     { label: 'Orders', value: data.totalOrder || 0, color: '#7c3aed', bg: '#f5f3ff' },
@@ -144,8 +152,8 @@ const AstrologerDetail = () => {
         <div className="cd-hero">
           <div className="cd-hero-left">
             <div className="cd-hero-avatar-wrap">
-              {profileImg ? (
-                <img src={profileImg} alt={data.name} className="cd-hero-avatar"
+              {data?.profileImage ? (
+                <img src={imgSrc(data?.profileImage)} alt={data.name} className="cd-hero-avatar"
                   onError={e => { e.target.src = fallbackSvg; }} />
               ) : (
                 <div className="cd-hero-avatar cd-hero-initial">
@@ -410,7 +418,7 @@ const AstrologerDetail = () => {
                   {followers.map((f, i) => (
                     <tr key={i}>
                       <td>{i + 1}</td>
-                      <td><img src={imgSrc(f.profileImage)} alt="" className="cd-tbl-avatar" onError={e => { e.target.src = fallbackSvg; }} /></td>
+                      <td><img src={imgSrc(f.profile)} alt="" className="cd-tbl-avatar" onError={e => { e.target.src = fallbackSvg; }} /></td>
                       <td className="cd-tbl-name">{f.userName || f.name || '-'}</td>
                       <td>{f.contactNo || '-'}</td>
                       <td>{formatDateTime(f.created_at || f.followingDate)}</td>
